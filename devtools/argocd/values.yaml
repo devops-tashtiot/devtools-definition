@@ -15,10 +15,8 @@ argo-cd:
 
   server:
     service:
-      type: LoadBalancer
-      annotations:
-        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-        service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      type: NodePort
+      nodePortHttp: 30080
 
   repoServer:
     resources:
