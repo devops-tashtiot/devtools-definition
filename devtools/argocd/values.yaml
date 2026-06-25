@@ -1,13 +1,8 @@
 # EKS-specific overrides for the ArgoCD umbrella chart.
-# These are merged on top of devtools-provisions/charts/argocd/values.yaml by ArgoCD.
+# Merged on top of devtools-provisions/charts/argocd/values.yaml by ArgoCD.
 
 argo-cd:
-  global:
-    domain: argocd.devtools-labs.example.com
-
   configs:
-    cm:
-      accounts.admin: "apiKey, login"
     repositories:
       devtools-provisions:
         url: https://github.com/devops-tashtiot/devtools-provisions
@@ -20,8 +15,6 @@ argo-cd:
 
   server:
     service:
-      # Use LoadBalancer to get an AWS NLB for external access,
-      # or keep ClusterIP and use: kubectl port-forward svc/argocd-server -n argocd 8080:80
       type: LoadBalancer
       annotations:
         service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
