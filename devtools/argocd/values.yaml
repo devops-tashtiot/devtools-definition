@@ -1,8 +1,13 @@
 # EKS-specific overrides for the ArgoCD umbrella chart.
-# Merged on top of devtools-provisions/charts/argocd/values.yaml by ArgoCD.
+# Merged on top of devtools-provisions/devtools/argocd/values.yaml by ArgoCD.
+# TLS is terminated at Cloudflare — ArgoCD runs insecure behind nginx-ingress + cloudflared.
 
 argo-cd:
   configs:
+    params:
+      "server.insecure": true
+    cm:
+      "accounts.admin": "apiKey, login"
     repositories:
       devtools-provisions:
         url: https://github.com/devops-tashtiot/devtools-provisions
@@ -15,10 +20,16 @@ argo-cd:
 
   server:
     service:
-      type: LoadBalancer
-      annotations:
-        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-        service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      type: ClusterIP
+    extraArgs:
+      - --insecure
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
 
   repoServer:
     resources:
