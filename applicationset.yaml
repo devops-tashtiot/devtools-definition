@@ -21,6 +21,7 @@ spec:
           targetRevision: main
           path: '{{path}}'
           helm:
+            skipCrds: true
             valueFiles:
               - values.yaml
               - $definition/devtools/{{path.basename}}/values.yaml
