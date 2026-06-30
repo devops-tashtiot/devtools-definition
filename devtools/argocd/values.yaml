@@ -4,7 +4,8 @@
 
 argo-cd:
   crds:
-    install: false
+    annotations:
+      argocd.argoproj.io/sync-options: Replace=true
 
   configs:
     params:
