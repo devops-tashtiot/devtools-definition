@@ -1,0 +1,39 @@
+# EKS-specific overrides for Woodpecker CI.
+# Merged on top of devtools-provision/devtools/woodpecker/values.yaml by ArgoCD.
+#
+# BOOTSTRAP NOTE: WOODPECKER_HOST must be set to the NLB hostname BEFORE GitHub
+# OAuth will work (the OAuth callback URL registered in GitHub must match).
+# Two-step process:
+#   1. Deploy with placeholder below — ArgoCD syncs, NLB is provisioned.
+#   2. kubectl get svc -n woodpecker woodpecker-server \
+#        -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+#   3. Replace the placeholder with the real hostname, push — ArgoCD re-syncs.
+
+woodpecker:
+  server:
+    env:
+      # Replace with actual NLB hostname after first deploy (see note above).
+      WOODPECKER_HOST: "http://REPLACE_WITH_NLB_HOSTNAME"
+
+    service:
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  agent:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
