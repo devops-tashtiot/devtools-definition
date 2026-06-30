@@ -1,0 +1,17 @@
+# EKS-specific overrides for Bitbucket Data Center 8.19.5.
+# Cloudflare tunnel: bitbucket.devopstashtiot.page → nginx-ingress → bitbucket
+
+bitbucket:
+  database:
+    url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/bitbucket"
+
+bitbucketSecrets:
+  license: "AAABhg0ODAoPeNp9UU1v4jAUvPtXRNrL9gByEgotkqVCElqWhHQb+iHUi0leyROJg2yHXf59HRK27R4q+eLnmfHMvB9RJaxftbCobVF3TAdj6lqev7Ic6gyJJ4FrrITPNbBm0qPm2MQHlUrcN09sinpTpzvQ1k8D45YHQoO8eB1bwYEX9YlPIo5mKrhIIfi7R3n8pDhqFJXmKu8nmktDZm+8UEBCTEGobwk81XgApmUNpGjhTyBV48shSb35sHmCfDhq77HccoGqnUSxT7xKaKMZGL8F47rgSiEXPCtRODdllfVQ9yu5Pf91ZzywyKPebJoNFsPftg4yd/knO86SdbRePE9fqAwn+eMkp6vaqarF1SRew22WX2M0o7sEL+e7V9ZlWdblBmT89qhMAtazz/nnPgvnfhIse6FjD67ty5HbMTrA6riHJS+BeXEUBQ/efBJ2gGYh7T7avDs4nuuxh5SO6JXr2uS+lmnOFfy/5a6MkzQeMJO4zVHc/Kuln1YlMb7YV2/vIsPFlTAsAhQlRODm4wCB3pPINQdeBKmFv0YmJwIUEVTH3kH0FlBmQR0smPIs6ozq41U=X02iu"
+  admin:
+    username: admin
+    password: "123456"
+    displayName: "Admin"
+    emailAddress: "netanelzucaim100@gmail.com"
+  db:
+    username: "devtools"
+    password: "bitbucket-db-2024"
