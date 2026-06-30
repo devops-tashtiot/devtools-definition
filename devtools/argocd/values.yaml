@@ -3,6 +3,9 @@
 # TLS is terminated at Cloudflare — ArgoCD runs insecure behind nginx-ingress + cloudflared.
 
 argo-cd:
+  crds:
+    install: false
+
   configs:
     params:
       "server.insecure": true
