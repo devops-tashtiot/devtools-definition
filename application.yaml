@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/netanelzucaim/devtools-provision.git
+    repoURL: https://github.com/devops-tashtiot/devtools-definition
     targetRevision: main
     path: .
     directory:
