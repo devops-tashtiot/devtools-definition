@@ -1,4 +1,4 @@
-# Overrides for Bitbucket Data Center 8.19.5 running on the minikube-on-EC2 cluster.
+# Overrides for Bitbucket Data Center 10.2.2 running on the minikube-on-EC2 cluster.
 # Cloudflare tunnel: bitbucket.devopstashtiot.page → nginx-ingress → bitbucket
 
 bitbucket:
