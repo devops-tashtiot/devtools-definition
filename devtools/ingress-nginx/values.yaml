@@ -1,0 +1,2 @@
+# No overrides yet — devtools-provisions/devtools/ingress-nginx/values.yaml
+# defaults (ClusterIP, modest resource limits) work as-is for this environment.

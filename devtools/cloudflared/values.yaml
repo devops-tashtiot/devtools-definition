@@ -1,0 +1,9 @@
+# Environment-specific overrides for the cloudflared devtool.
+# Merged on top of devtools-provisions/devtools/cloudflared/values.yaml by ArgoCD.
+#
+# Tunnel ID and account details: see parent CLAUDE.md ("Cloudflare — devopstashtiot.page").
+# tunnelCredentialsSsmParameter must be uploaded once before this devtool can sync —
+# see devtools-labs/CLAUDE.md "Prerequisites".
+
+tunnelId: "7de872ce-2826-42fb-9aea-325e10e3e5fc"
+tunnelCredentialsSsmParameter: "/devtools/cloudflare/tunnel-credentials"
