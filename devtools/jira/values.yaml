@@ -1,0 +1,80 @@
+# Overrides for Jira Data Center 11.3.7 running on the minikube-on-EC2 cluster.
+# Cloudflare tunnel: jira.devopstashtiot.page → nginx-ingress → jira
+#
+# NOTE: Jira's Docker image/Helm chart has no automated setup mechanism for the
+# license or the sysadmin user (unlike bitbucket) — the first-run setup wizard
+# (entering the license, creating the first admin account) must be completed
+# once in the browser after initial deploy. Read the license from SSM
+# (/devtools/jira/license) and the shared admin password (/devtools/admin/password)
+# directly with `aws ssm get-parameter --with-decryption` when doing that —
+# there's no jira-license/jira-sysadmin Secret in-cluster since nothing would
+# ever consume it.
+
+jira:
+  database:
+    url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/jira"
+  # Ensures the "jira" database/role exist on the shared RDS instance before
+  # Jira starts — idempotent, safe to re-run on every pod start.
+  additionalInitContainers:
+    - name: ensure-postgres-db
+      image: postgres:17-alpine
+      env:
+        - name: PGHOST
+          value: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
+        - name: PGPORT
+          value: "5432"
+        - name: ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: rds-admin-credentials
+              key: username
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: rds-admin-credentials
+              key: password
+        - name: APP_DB_NAME
+          value: "jira"
+        - name: APP_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: jira-db
+              key: username
+        - name: APP_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: jira-db
+              key: password
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
+            "SELECT 1 FROM pg_roles WHERE rolname = '$APP_DB_USER'" | grep -q 1 || \
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+            "CREATE ROLE \"$APP_DB_USER\" LOGIN PASSWORD '$APP_DB_PASSWORD';"
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+            "ALTER ROLE \"$APP_DB_USER\" WITH PASSWORD '$APP_DB_PASSWORD';"
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
+            "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+            "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$APP_DB_USER\";"
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+            "GRANT ALL PRIVILEGES ON DATABASE \"$APP_DB_NAME\" TO \"$APP_DB_USER\";"
+  volumes:
+    localHome:
+      persistentVolumeClaim:
+        storageClassName: standard
+    sharedHome:
+      persistentVolumeClaim:
+        storageClassName: standard
+
+jiraSecrets:
+  db:
+    username: "devtools-apps"
+    password: "jira-db-2024"
+
+rdsAdmin:
+  usernameSsmParameter: "/devtools/rds/admin-username"
+  passwordSsmParameter: "/devtools/rds/admin-password"
