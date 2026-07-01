@@ -1,0 +1,5 @@
+# Environment-specific overrides for External Secrets Operator v2.7.0.
+# Merged on top of devtools-provisions/devtools/external-secrets-operator/values.yaml by ArgoCD.
+
+awsParameterStore:
+  region: "il-central-1"
