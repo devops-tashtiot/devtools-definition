@@ -1,0 +1,24 @@
+# Overrides for Confluence Data Center 9.3.1 running on the minikube-on-EC2 cluster.
+# Cloudflare tunnel: confluence.devopstashtiot.page → nginx-ingress → confluence
+
+confluence:
+  database:
+    url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/confluence"
+  volumes:
+    localHome:
+      persistentVolumeClaim:
+        storageClassName: standard
+    sharedHome:
+      persistentVolumeClaim:
+        storageClassName: standard
+    synchronyHome:
+      persistentVolumeClaim:
+        storageClassName: standard
+
+confluenceSecrets:
+  # License is stored in AWS SSM Parameter Store (SecureString), not here —
+  # requires the external-secrets-operator devtool + ClusterSecretStore.
+  licenseSsmParameter: "/devtools/confluence/license"
+  db:
+    username: "devtools-apps"
+    password: "devtools-apps-db-2024"
