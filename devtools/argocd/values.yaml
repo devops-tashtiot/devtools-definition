@@ -1,6 +1,13 @@
-# EKS-specific overrides for the ArgoCD umbrella chart.
+# Overrides for the ArgoCD umbrella chart.
 # Merged on top of devtools-provisions/devtools/argocd/values.yaml by ArgoCD.
 # TLS is terminated at Cloudflare — ArgoCD runs insecure behind nginx-ingress + cloudflared.
+#
+# NOTE: `ingress.enabled: true` below is only correct while the minikube module
+# is the active environment (its ingress-nginx/cloudflared devtools are
+# GitOps-managed). If EKS is ever active at the same time, its argocd-ingress
+# Terraform module creates the same "argocd" Ingress object directly — do not
+# run both against this repo simultaneously, or set `enabled: false` here
+# before switching to EKS.
 
 argo-cd:
   crds:
@@ -52,3 +59,11 @@ argo-cd:
       limits:
         cpu: 500m
         memory: 1Gi
+
+ingress:
+  enabled: true
+  host: argocd.devopstashtiot.page
+
+# Shared admin password across argocd/bitbucket/confluence — see
+# devtools-provisions/devtools/argocd/templates/argocd-admin-secret.yaml
+adminPasswordSsmParameter: "/devtools/admin/password"
