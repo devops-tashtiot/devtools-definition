@@ -2,6 +2,18 @@
 # Cloudflare tunnel: bitbucket.devopstashtiot.page → nginx-ingress → bitbucket
 
 bitbucket:
+  # This chart overloads ingress.https for two things: the K8s Ingress TLS
+  # stanza (unused here — ssl-redirect is off, Cloudflare terminates TLS) AND
+  # the SERVER_SCHEME/SERVER_SECURE/SERVER_PROXY_PORT/SETUP_BASEURL env vars
+  # that tell Bitbucket it's reached over HTTPS at the edge. Leaving it false
+  # (the devtools-provision default, matching every other tool's convention)
+  # makes Bitbucket compute its own base URL as http://, which mismatches the
+  # browser's https:// Origin/Referer and trips its XSRF filter, silently
+  # blocking login POSTs. Must be true here even though TLS isn't terminated
+  # in-cluster.
+  ingress:
+    https: true
+
   database:
     url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/bitbucket"
   # Ensures the "bitbucket" database/role exist on the shared RDS instance
