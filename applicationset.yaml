@@ -37,3 +37,17 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
+      # external-secrets-operator's admission webhook server-side-defaults
+      # fields onto ExternalSecret objects that aren't in the chart templates
+      # (conversionStrategy/decodingStrategy/metadataPolicy per data entry,
+      # deletionPolicy on target) — without this, ArgoCD reports OutOfSync
+      # forever even though the secret sync itself succeeds. Affects
+      # argocd's admin-secret, and bitbucket/confluence/jira's secrets.
+      ignoreDifferences:
+        - group: external-secrets.io
+          kind: ExternalSecret
+          jqPathExpressions:
+            - '.spec.target.deletionPolicy'
+            - '.spec.data[].remoteRef.conversionStrategy'
+            - '.spec.data[].remoteRef.decodingStrategy'
+            - '.spec.data[].remoteRef.metadataPolicy'
