@@ -1,0 +1,68 @@
+# Overrides for SonarQube Community Edition 25.6.0.109173 running on the
+# minikube-on-EC2 cluster.
+# Cloudflare tunnel: sonarqube.devopstashtiot.page → nginx-ingress → sonarqube
+#
+# Community Edition is free and requires no license key at all (unlike
+# Developer/Enterprise/Data Center editions) — there's nothing to wire from
+# SSM here beyond the shared admin password and RDS credentials.
+
+sonarqube:
+  jdbcOverwrite:
+    jdbcUrl: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/sonarqube"
+    # Plaintext is fine here (matches this repo's convention of committing DB
+    # credentials in plaintext) — the chart's jdbcOverwrite has no
+    # secret-backed username field, only a secret-backed password.
+    jdbcUsername: "devtools"
+
+  # Ensures the "sonarqube" database exists on the shared RDS instance before
+  # SonarQube starts — idempotent, safe to re-run on every pod start. Same
+  # pattern as devtools-definition/devtools/{bitbucket,confluence}, adapted
+  # to this chart's own extraInitContainers field.
+  extraInitContainers:
+    - name: ensure-postgres-db
+      image: postgres:17-alpine
+      env:
+        - name: PGHOST
+          value: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
+        - name: PGPORT
+          value: "5432"
+        - name: ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: rds-admin-credentials
+              key: username
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: rds-admin-credentials
+              key: password
+        - name: APP_DB_NAME
+          value: "sonarqube"
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          # Every devtool connects as the shared RDS admin user (see
+          # rds-admin-credentials / sonarqube-db, both sourced from the same
+          # SSM params) — no per-tool role, so nothing to CREATE ROLE or
+          # GRANT here, just make sure the database itself exists.
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
+            "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+            "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
+
+  persistence:
+    storageClass: standard
+
+  # Chart requirement, not a credential to an external system — gates the
+  # /api/system endpoints the readiness/liveness probes call. Plaintext is
+  # fine per this repo's convention.
+  monitoringPasscode: "fa01e8bfa359d47924497131c1863fd7"
+
+# Shared admin password across argocd/bitbucket/confluence/sonarqube.
+adminPasswordSsmParameter: "/devtools/admin/password"
+
+rdsAdmin:
+  usernameSsmParameter: "/devtools/rds/admin-username"
+  passwordSsmParameter: "/devtools/rds/admin-password"
