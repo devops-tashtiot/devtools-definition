@@ -6,7 +6,7 @@ metadata:
 spec:
   generators:
     - git:
-        repoURL: https://github.com/devops-tashtiot/devtools-provisions
+        repoURL: https://github.com/devops-tashtiot/devtools-provision
         revision: main
         directories:
           - path: devtools/*
@@ -17,7 +17,7 @@ spec:
     spec:
       project: default
       sources:
-        - repoURL: https://github.com/devops-tashtiot/devtools-provisions
+        - repoURL: https://github.com/devops-tashtiot/devtools-provision
           targetRevision: main
           path: '{{path}}'
           helm:

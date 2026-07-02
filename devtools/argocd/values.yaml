@@ -1,5 +1,5 @@
 # Overrides for the ArgoCD umbrella chart.
-# Merged on top of devtools-provisions/devtools/argocd/values.yaml by ArgoCD.
+# Merged on top of devtools-provision/devtools/argocd/values.yaml by ArgoCD.
 # TLS is terminated at Cloudflare — ArgoCD runs insecure behind nginx-ingress + cloudflared.
 #
 # NOTE: `ingress.enabled: true` below is only correct while the minikube module
@@ -20,14 +20,22 @@ argo-cd:
     cm:
       "accounts.admin": "apiKey, login"
     repositories:
-      devtools-provisions:
-        url: https://github.com/devops-tashtiot/devtools-provisions
+      devtools-provision:
+        url: https://github.com/devops-tashtiot/devtools-provision
         type: git
-        name: devtools-provisions
+        name: devtools-provision
       devtools-definition:
         url: https://github.com/devops-tashtiot/devtools-definition
         type: git
         name: devtools-definition
+      clusters-provision:
+        url: https://github.com/devops-tashtiot/clusters-provision
+        type: git
+        name: clusters-provision
+      clusters-definition:
+        url: https://github.com/devops-tashtiot/clusters-definition
+        type: git
+        name: clusters-definition
 
   server:
     service:
@@ -65,5 +73,5 @@ ingress:
   host: argocd.devopstashtiot.page
 
 # Shared admin password across argocd/bitbucket/confluence — see
-# devtools-provisions/devtools/argocd/templates/argocd-admin-secret.yaml
+# devtools-provision/devtools/argocd/templates/argocd-admin-secret.yaml
 adminPasswordSsmParameter: "/devtools/admin/password"
