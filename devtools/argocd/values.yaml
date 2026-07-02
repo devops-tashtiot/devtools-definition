@@ -19,6 +19,19 @@ argo-cd:
       "server.insecure": true
     cm:
       "accounts.admin": "apiKey, login"
+      # OIDC login backed by RHBK/AD — see clusters-definition/clusters/rhbk
+      # for the realm + client this issuer/clientID point at. clientSecret
+      # is substituted from argocd-secret's oidc.keycloak.clientSecret key,
+      # merged in via devtools-provision/devtools/argocd/templates/oidc-secret.yaml.
+      "oidc.config": |
+        name: RHBK
+        issuer: https://rhbk.devopstashtiot.page/realms/devtools
+        clientID: argocd
+        clientSecret: $argocd-secret:oidc.keycloak.clientSecret
+        requestedScopes:
+          - openid
+          - profile
+          - email
     repositories:
       devtools-provision:
         url: https://github.com/devops-tashtiot/devtools-provision
@@ -75,3 +88,10 @@ ingress:
 # Shared admin password across argocd/bitbucket/confluence — see
 # devtools-provision/devtools/argocd/templates/argocd-admin-secret.yaml
 adminPasswordSsmParameter: "/devtools/admin/password"
+
+# RHBK-issued OIDC client secret for ArgoCD — see
+# devtools-provision/devtools/argocd/templates/oidc-secret.yaml. This is the
+# same SSM parameter clusters-provision/clusters/rhbk's
+# set-client-secret-job.yaml reads to set the actual secret on the RHBK side
+# via the Admin API — one source of truth, no manual sync needed.
+oidcClientSecretSsmParameter: "/devtools/rhbk/argocd-client-secret"
