@@ -27,42 +27,19 @@ bitbucket:
               key: password
         - name: APP_DB_NAME
           value: "bitbucket"
-        - name: APP_DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: bitbucket-db
-              key: username
-        - name: APP_DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: bitbucket-db
-              key: password
       command:
         - /bin/sh
         - -c
         - |
           set -eu
-          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
-            "SELECT 1 FROM pg_roles WHERE rolname = '$APP_DB_USER'" | grep -q 1 || \
-          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-            "CREATE ROLE \"$APP_DB_USER\" LOGIN PASSWORD '$APP_DB_PASSWORD';"
-          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-            "ALTER ROLE \"$APP_DB_USER\" WITH PASSWORD '$APP_DB_PASSWORD';"
-          # Postgres 16+ on RDS doesn't implicitly grant the creating admin
-          # user usable SET ROLE rights on a role it just created — without
-          # this explicit GRANT, "CREATE DATABASE ... OWNER" below fails with
-          # "must be able to SET ROLE". Not currently hit here since
-          # Terraform pre-creates the "bitbucket" database, but keeping this
-          # consistent with confluence/jira protects against a future
-          # from-scratch RDS instance where it would matter.
-          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-            "GRANT \"$APP_DB_USER\" TO \"$ADMIN_USER\";"
+          # Every devtool connects as the shared RDS admin user (see
+          # rds-admin-credentials / bitbucket-db, both sourced from the same
+          # SSM params) — no per-tool role, so nothing to CREATE ROLE or
+          # GRANT here, just make sure the database itself exists.
           psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
             "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
           psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-            "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$APP_DB_USER\";"
-          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-            "GRANT ALL PRIVILEGES ON DATABASE \"$APP_DB_NAME\" TO \"$APP_DB_USER\";"
+            "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
   volumes:
     localHome:
       persistentVolumeClaim:
@@ -80,9 +57,6 @@ bitbucketSecrets:
     emailAddress: "netanelzucaim100@gmail.com"
   # Shared admin password across argocd/bitbucket/confluence.
   adminPasswordSsmParameter: "/devtools/admin/password"
-  db:
-    username: "devtools"
-    password: "bitbucket-db-2024"
 
 rdsAdmin:
   usernameSsmParameter: "/devtools/rds/admin-username"
