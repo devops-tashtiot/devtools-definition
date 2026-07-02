@@ -1,0 +1,95 @@
+# Overrides for Artifactory Data Center 7.117.15 running on the minikube-on-EC2 cluster.
+# Cloudflare tunnel: artifactory.devopstashtiot.page → nginx-ingress → artifactory
+#
+# NOTE — deployed unlicensed (no JFrog license configured yet): Artifactory
+# will boot in OSS/trial mode, and Xray cannot fully activate against it
+# without an Enterprise+ license. To license it later:
+#   1. aws ssm put-parameter --name "/devtools/artifactory/license" \
+#        --value "<license text>" --type SecureString --region il-central-1
+#   2. Set artifactorySecrets.licenseSsmParameter below to that path.
+#   3. Set artifactory.artifactory.license.secret: artifactory-license and
+#      .dataKey: artifactory.lic below (mirrors the admin block already wired).
+
+artifactory:
+  artifactory:
+    persistence:
+      storageClassName: standard
+
+    # Shared with the xray devtool (devtools-definition/devtools/xray/values.yaml)
+    # so Xray can join this Artifactory instance's Access federation — both
+    # must carry the exact same values. Generated with `openssl rand -hex 32`
+    # / `openssl rand -hex 16`; committed plaintext per this repo's convention
+    # for non-license secrets (see root CLAUDE.md / add-devtool skill).
+    masterKey: "24796f27c35ba50959f002cd4250e96620a2b229367dcc14eb6fc4e16ce1b8f7"
+    joinKey: "084ac541e4965eda8498fe8a7c148cce"
+
+    # Ensures the "artifactory" database/role exist on the shared RDS
+    # instance before Artifactory starts — idempotent, safe to re-run on
+    # every pod restart. Same pattern as confluence/bitbucket's
+    # additionalInitContainers, adapted to this chart's customInitContainersBegin hook.
+    customInitContainersBegin: |
+      - name: ensure-postgres-db
+        image: postgres:17-alpine
+        env:
+          - name: PGHOST
+            value: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
+          - name: PGPORT
+            value: "5432"
+          - name: ADMIN_USER
+            valueFrom:
+              secretKeyRef:
+                name: rds-admin-credentials
+                key: username
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: rds-admin-credentials
+                key: password
+          - name: APP_DB_NAME
+            value: "artifactory"
+          - name: APP_DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: artifactory-db
+                key: username
+          - name: APP_DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: artifactory-db
+                key: password
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -eu
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
+              "SELECT 1 FROM pg_roles WHERE rolname = '$APP_DB_USER'" | grep -q 1 || \
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+              "CREATE ROLE \"$APP_DB_USER\" LOGIN PASSWORD '$APP_DB_PASSWORD';"
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+              "ALTER ROLE \"$APP_DB_USER\" WITH PASSWORD '$APP_DB_PASSWORD';"
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+              "GRANT \"$APP_DB_USER\" TO \"$ADMIN_USER\";"
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
+              "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+              "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$APP_DB_USER\";"
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+              "GRANT ALL PRIVILEGES ON DATABASE \"$APP_DB_NAME\" TO \"$APP_DB_USER\";"
+
+artifactorySecrets:
+  # License intentionally left empty — see note at top of this file.
+  license: ""
+  licenseSsmParameter: ""
+  admin:
+    username: "admin"
+  # Shared admin password across every devtool on this platform.
+  adminPasswordSsmParameter: "/devtools/admin/password"
+  db:
+    username: "devtools-apps"
+    password: "artifactory-db-2024"
+    url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory"
+
+rdsAdmin:
+  usernameSsmParameter: "/devtools/rds/admin-username"
+  passwordSsmParameter: "/devtools/rds/admin-password"
