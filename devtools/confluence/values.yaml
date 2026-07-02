@@ -70,8 +70,8 @@ confluenceSecrets:
   # requires the external-secrets-operator devtool + ClusterSecretStore.
   licenseSsmParameter: "/devtools/confluence/license"
   db:
-    username: "devtools-apps"
-    password: "devtools-apps-db-2024"
+    username: "confluence"
+    password: "confluence-db-2024"
 
 rdsAdmin:
   usernameSsmParameter: "/devtools/rds/admin-username"

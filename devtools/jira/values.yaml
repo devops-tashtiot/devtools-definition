@@ -72,7 +72,7 @@ jira:
 
 jiraSecrets:
   db:
-    username: "devtools-apps"
+    username: "jira"
     password: "jira-db-2024"
 
 rdsAdmin:
