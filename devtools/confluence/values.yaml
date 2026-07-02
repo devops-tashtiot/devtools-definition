@@ -48,6 +48,12 @@ confluence:
             "CREATE ROLE \"$APP_DB_USER\" LOGIN PASSWORD '$APP_DB_PASSWORD';"
           psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
             "ALTER ROLE \"$APP_DB_USER\" WITH PASSWORD '$APP_DB_PASSWORD';"
+          # Postgres 16+ on RDS doesn't implicitly grant the creating admin
+          # user usable SET ROLE rights on a role it just created — without
+          # this explicit GRANT, "CREATE DATABASE ... OWNER" below fails with
+          # "must be able to SET ROLE".
+          psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+            "GRANT \"$APP_DB_USER\" TO \"$ADMIN_USER\";"
           psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
             "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
           psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
