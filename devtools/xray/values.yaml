@@ -62,6 +62,23 @@ xray:
   rabbitmq:
     auth:
       password: "xray-rabbitmq-2024"
+    # This is a genuinely first-time install: there is no pre-existing
+    # xray-rabbitmq-0 pod/queues for the chart's "xray-pre-upgrade-hook"
+    # PreSync Job to inspect. That hook (charts/xray/templates/migration-hook.yaml)
+    # unconditionally runs `kubectl exec xray-rabbitmq-0 -- rabbitmqctl ...`
+    # whenever rabbitmq.migration.enabled (default true), which fails forever
+    # against a pod that doesn't exist yet, exhausts its backoffLimit, and
+    # blocks ArgoCD from ever syncing the rest of Xray's resources (rabbitmq/
+    # xray StatefulSets included) — this is why the Application's health was
+    # "Missing" with nothing but failed hook-job pods in the namespace.
+    # Disabling migration (and setting rabbitmqUpgradeReady per the chart's
+    # own guard at migration-hook.yaml:14-16) skips the hook entirely, which
+    # is safe here since there's no existing RabbitMQ data/feature-flags to
+    # migrate. Re-enable migration.enabled the next time this chart version
+    # is bumped after RabbitMQ already has data.
+    migration:
+      enabled: false
+    rabbitmqUpgradeReady: true
 
   # Self-prefixed fields (chart quirk, see values.yaml comment in devtools-provision).
   xray:
@@ -81,7 +98,14 @@ xraySecrets:
     password: "xray-db-2024"
     # NOTE: Xray's system.yaml expects the native "postgres://" scheme, not
     # Artifactory's "jdbc:postgresql://" — see the two charts' files/system.yaml.
-    url: "postgres://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/xray?sslmode=disable"
+    # sslmode=require (not disable): the shared devtools-rds instance's
+    # parameter group has rds.force_ssl=1, so a plaintext connection is
+    # rejected by pg_hba.conf ("no pg_hba.conf entry ... no encryption") —
+    # confirmed by the identical failure on Artifactory's "metadata" service
+    # (see devtools-definition/devtools/artifactory/values.yaml). Xray's own
+    # Postgres client hasn't hit this yet only because the pre-upgrade hook
+    # above has always blocked it from ever starting.
+    url: "postgres://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/xray?sslmode=require"
 
 rdsAdmin:
   usernameSsmParameter: "/devtools/rds/admin-username"

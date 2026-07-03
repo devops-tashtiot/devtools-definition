@@ -88,7 +88,14 @@ artifactorySecrets:
   db:
     username: "devtools-apps"
     password: "artifactory-db-2024"
-    url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory"
+    # sslmode=require: the shared devtools-rds instance's parameter group has
+    # rds.force_ssl=1, so a non-SSL connection is rejected by pg_hba.conf with
+    # "no pg_hba.conf entry ... no encryption". The main Artifactory (JDBC)
+    # container tolerates this silently because pgjdbc's default sslmode is
+    # "prefer", but the split-container "metadata" service's Go Postgres
+    # client defaults to no SSL and was crash-looping on exactly this error —
+    # forcing SSL here fixes it for every service reading this shared URL.
+    url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory?sslmode=require"
 
 rdsAdmin:
   usernameSsmParameter: "/devtools/rds/admin-username"
