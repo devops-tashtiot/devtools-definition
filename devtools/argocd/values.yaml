@@ -18,6 +18,14 @@ argo-cd:
     params:
       "server.insecure": true
     cm:
+      # Required for OIDC to work at all: without it, ArgoCD has to guess its
+      # own external base URL to build the redirect_uri it sends to RHBK's
+      # authorization endpoint, and that guess doesn't match the exact
+      # redirect URI registered for the "argocd" client (argocdClient.redirectUri
+      # in clusters-definition/clusters/rhbk/values.yaml) — Keycloak then
+      # rejects the login with "Invalid redirect URL: the protocol and host
+      # (including port) must match".
+      url: https://argocd.devopstashtiot.page
       "accounts.admin": "apiKey, login"
       # OIDC login backed by RHBK/AD — see clusters-definition/clusters/rhbk
       # for the realm + client this issuer/clientID point at. clientSecret
