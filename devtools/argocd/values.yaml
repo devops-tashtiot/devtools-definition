@@ -40,6 +40,16 @@ argo-cd:
           - openid
           - profile
           - email
+          - groups
+    rbac:
+      # Grants admin to anyone in the devops-tashtiot AD group (surfaced as a
+      # "groups" claim by RHBK's optional "groups" client scope — see
+      # clusters-provision/clusters/rhbk/templates/realm-import.yaml and
+      # set-ldap-credentials-job.yaml's group-ldap-mapper) rather than
+      # individual users, so AD group membership is the single source of
+      # truth for who administers ArgoCD.
+      "policy.csv": |
+        g, devops-tashtiot, role:admin
     repositories:
       devtools-provision:
         url: https://github.com/devops-tashtiot/devtools-provision
