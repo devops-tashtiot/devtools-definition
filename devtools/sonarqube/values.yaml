@@ -94,10 +94,12 @@ rdsAdmin:
   usernameSsmParameter: "/devtools/rds/admin-username"
   passwordSsmParameter: "/devtools/rds/admin-password"
 
-# Same SSM parameter clusters-provision/clusters/rhbk's
-# set-sonarqube-client-secret-job.yaml reads to set the real value on the
-# RHBK/Keycloak side — one source of truth, no manual sync needed.
-oidcClientSecretSsmParameter: "/devtools/rhbk/sonarqube-client-secret"
+# Same shared SSM parameter (one value for argocd/sonarqube/jira/confluence/
+# bitbucket — see clusters-provision/clusters/rhbk/values.yaml's
+# sharedClientSecretSsmParameter) clusters-provision/clusters/rhbk's
+# set-client-secrets-job.yaml reads to set the real value on every client on
+# the RHBK/Keycloak side — one source of truth, no manual sync needed.
+oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
 
 # Grants admin to anyone in the devops-tashtiot AD group (see
 # clusters-provision/clusters/rhbk's group-ldap-mapper) rather than

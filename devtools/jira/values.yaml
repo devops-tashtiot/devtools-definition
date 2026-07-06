@@ -11,6 +11,27 @@
 # ever consume it.
 
 jira:
+  # Base chart defaults (1536m/1536m heap, 2.5Gi container limit) leave no
+  # headroom once Jira is actually indexing/handling real projects alongside
+  # Confluence and Bitbucket on the same node. Bumped heap and container
+  # ceiling; requests kept modest (node is a single t3.2xlarge, 7 vCPU / 28Gi
+  # allocatable — see devtools-labs/terraform/live/devtools/minikube
+  # /terragrunt.hcl) so Confluence + Bitbucket + Jira requests don't eat the
+  # whole node and starve ArgoCD/ingress-nginx/Artifactory/SonarQube.
+  jira:
+    resources:
+      jvm:
+        maxHeap: "2048m"
+        minHeap: "2048m"
+        reservedCodeCache: "256m"
+      container:
+        requests:
+          cpu: "1500m"
+          memory: "3Gi"
+        limits:
+          cpu: "4"
+          memory: "4Gi"
+
   database:
     url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/jira"
   # Ensures the "jira" database/role exist on the shared RDS instance before

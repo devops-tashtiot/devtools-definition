@@ -14,6 +14,26 @@ bitbucket:
   ingress:
     https: true
 
+  # Base chart defaults (768m/512m heap, 3Gi container limit) were fine for
+  # initial setup but leave no headroom once real repos/PR builds are hitting
+  # it alongside Confluence and Jira on the same node. Bumped heap and
+  # container ceiling; requests kept modest (node is a single t3.2xlarge,
+  # 7 vCPU / 28Gi allocatable — see devtools-labs/terraform/live/devtools/minikube
+  # /terragrunt.hcl) so Confluence + Bitbucket + Jira requests don't eat the
+  # whole node and starve ArgoCD/ingress-nginx/Artifactory/SonarQube.
+  bitbucket:
+    resources:
+      jvm:
+        maxHeap: "1536m"
+        minHeap: "1024m"
+      container:
+        requests:
+          cpu: "750m"
+          memory: "4Gi"
+        limits:
+          cpu: "3"
+          memory: "5Gi"
+
   database:
     url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/bitbucket"
   # Ensures the "bitbucket" database/role exist on the shared RDS instance

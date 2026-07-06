@@ -10,3 +10,32 @@ example-fast-api:
     repository: ghcr.io/devops-tashtiot/devops-api
     tag: "v0.2.1"
     pullPolicy: IfNotPresent
+
+  # Per-environment values for the minikube-on-EC2 cluster — placeholders in
+  # devtools-provision/devtools/devops-api/values.yaml, filled in here.
+  env:
+    ARTIFACTORY_API_URL: "https://artifactory.devopstashtiot.page"
+    ARTIFACTORY_API_TOKEN: "" # set out-of-band, not committed to git
+    ARTIFACTORY_LDAP_SETTING_NAME: "ldap-ad"
+    ARTIFACTORY_S3_XRAY_UPDATES_BASE_URL: "http://localhost:9100/platform-devops-team/xray-vulnerability-updates"
+
+    BITBUCKET_API_URL: "https://bitbucket.devopstashtiot.page"
+
+    CONFLUENCE_API_URL: "https://confluence.devopstashtiot.page"
+    CONFLUENCE_S3_PLUGINS_BASE_URL: "http://localhost:9100/platform-clients/confluence-plugins"
+    CONFLUENCE_S3_IMPORTS_BASE_URL: "http://localhost:9100/platform-clients/confluence-space-imports"
+
+    JIRA_API_URL: "https://jira.devopstashtiot.page"
+
+    SONARQUBE_API_URL: "https://sonarqube.devopstashtiot.page"
+
+    ARGOCD_ALLOWED_ENVS: '["prod","dr","int"]'
+    ARGOCD_CLUSTER_SECRET_REPO_URL: "http://gitea-http.gitea.svc.cluster.local:3000/netanelzucaim/devtools-provision.git"
+
+    GIT_API_URL: "http://localhost:7990/rest/api/1.0"
+    GIT_TOKEN: "" # set out-of-band, not committed to git
+    GIT_PROJECT_KEY: "ARGO"
+    GIT_SSH_KEY_PATH: "/root/.ssh/id_ed25519"
+    GIT_SSH_PORT: "7999"
+
+    DOMAIN_SUFFIX: "devopstashtiot.page"
