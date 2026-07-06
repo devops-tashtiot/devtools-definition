@@ -1,4 +1,4 @@
-# Overrides for Jira Data Center 11.3.7 running on the minikube-on-EC2 cluster.
+# Overrides for Jira Data Center 9.12.8 running on the minikube-on-EC2 cluster.
 # Cloudflare tunnel: jira.devopstashtiot.page → nginx-ingress → jira
 #
 # NOTE: Jira's Docker image/Helm chart has no automated setup mechanism for the
