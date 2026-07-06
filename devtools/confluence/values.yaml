@@ -2,6 +2,18 @@
 # Cloudflare tunnel: confluence.devopstashtiot.page → nginx-ingress → confluence
 
 confluence:
+  # This chart overloads ingress.https for two things: the K8s Ingress TLS
+  # stanza (unused here — ssl-redirect is off, Cloudflare terminates TLS) AND
+  # the ATL_PROXY_NAME/ATL_PROXY_PORT env vars that tell Confluence's Tomcat
+  # it's reached over HTTPS at the edge. Leaving it false (the devtools-provision
+  # default) makes Confluence compute its own base URL as http://, which
+  # mismatches the browser's https:// origin and requires manually clicking
+  # "Update base URL" after every setup. Same issue already fixed the same way
+  # for bitbucket (see devtools/bitbucket/values.yaml) — must be true here
+  # even though TLS isn't terminated in-cluster.
+  ingress:
+    https: true
+
   # Base chart defaults (1536m heap / 2.5Gi container limit) are sized for a
   # local Kind cluster and leave no headroom once Confluence is actually doing
   # work (OSGi plugin/bundle loading, setup wizard rendering) — observed the
