@@ -7,6 +7,6 @@
 
 example-fast-api:
   image:
-    repository: dns-api
-    tag: "7.0"
+    repository: ghcr.io/devops-tashtiot/devops-api
+    tag: "v0.1.0"
     pullPolicy: IfNotPresent
