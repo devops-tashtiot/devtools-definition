@@ -34,7 +34,6 @@ example-fast-api:
   # "sonarqube-sonarqube"; artifactory collapses like bitbucket/confluence/jira.
   env:
     ARTIFACTORY_API_URL: "http://artifactory.artifactory.svc.cluster.local:8082"
-    ARTIFACTORY_API_TOKEN: "" # set out-of-band, not committed to git
     ARTIFACTORY_LDAP_SETTING_NAME: "ldap-ad"
     ARTIFACTORY_S3_XRAY_UPDATES_BASE_URL: "http://localhost:9100/platform-devops-team/xray-vulnerability-updates"
 
