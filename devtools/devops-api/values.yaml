@@ -13,26 +13,45 @@ example-fast-api:
 
   # Per-environment values for the minikube-on-EC2 cluster — placeholders in
   # devtools-provision/devtools/devops-api/values.yaml, filled in here.
+  #
+  # *_API_URL values below point at each tool's in-cluster Service DNS
+  # (<service>.<namespace>.svc.cluster.local), not its public
+  # *.devopstashtiot.page hostname. devops-api runs as a pod in this same
+  # cluster (see devtools-provision/devtools/devops-api), so routing its
+  # calls out through the public hostname would bounce them through the
+  # Cloudflare Tunnel and hit Cloudflare Access's interactive email-verify
+  # page — Access is enforced at Cloudflare's edge before the tunnel ever
+  # reaches this cluster's ingress, so there is no ingress-side header
+  # (e.g. a CF-Access-Client-Id/Secret service token) that can satisfy it
+  # after the fact. Calling the Service DNS directly stays on the pod
+  # network and never touches the tunnel or Access at all. Service names/
+  # ports below come from each chart's fullname helper + default
+  # service port (see devtools-provision/devtools/<tool>/charts/<tool>):
+  # bitbucket/confluence/jira use Bitnami's common.names.fullname, which
+  # collapses to the bare release name (= namespace name) since the
+  # release name already contains the chart name; sonarqube's own fullname
+  # helper always emits "<release>-<chart>" (no such collapse), giving
+  # "sonarqube-sonarqube"; artifactory collapses like bitbucket/confluence/jira.
   env:
-    ARTIFACTORY_API_URL: "https://artifactory.devopstashtiot.page"
+    ARTIFACTORY_API_URL: "http://artifactory.artifactory.svc.cluster.local:8082"
     ARTIFACTORY_API_TOKEN: "" # set out-of-band, not committed to git
     ARTIFACTORY_LDAP_SETTING_NAME: "ldap-ad"
     ARTIFACTORY_S3_XRAY_UPDATES_BASE_URL: "http://localhost:9100/platform-devops-team/xray-vulnerability-updates"
 
-    BITBUCKET_API_URL: "https://bitbucket.devopstashtiot.page"
+    BITBUCKET_API_URL: "http://bitbucket.bitbucket.svc.cluster.local"
 
-    CONFLUENCE_API_URL: "https://confluence.devopstashtiot.page"
+    CONFLUENCE_API_URL: "http://confluence.confluence.svc.cluster.local"
     CONFLUENCE_S3_PLUGINS_BASE_URL: "http://localhost:9100/platform-clients/confluence-plugins"
     CONFLUENCE_S3_IMPORTS_BASE_URL: "http://localhost:9100/platform-clients/confluence-space-imports"
 
-    JIRA_API_URL: "https://jira.devopstashtiot.page"
+    JIRA_API_URL: "http://jira.jira.svc.cluster.local"
 
-    SONARQUBE_API_URL: "https://sonarqube.devopstashtiot.page"
+    SONARQUBE_API_URL: "http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000"
 
     ARGOCD_ALLOWED_ENVS: '["prod","dr","int"]'
     ARGOCD_CLUSTER_SECRET_REPO_URL: "http://gitea-http.gitea.svc.cluster.local:3000/netanelzucaim/devtools-provision.git"
 
-    GIT_API_URL: "http://localhost:7990/rest/api/1.0"
+    GIT_API_URL: "http://bitbucket.bitbucket.svc.cluster.local/rest/api/1.0"
     GIT_TOKEN: "" # set out-of-band, not committed to git
     GIT_PROJECT_KEY: "ARGO"
     GIT_SSH_KEY_PATH: "/root/.ssh/id_ed25519"
