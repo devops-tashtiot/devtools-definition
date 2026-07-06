@@ -2,6 +2,27 @@
 # Cloudflare tunnel: confluence.devopstashtiot.page → nginx-ingress → confluence
 
 confluence:
+  # Base chart defaults (1536m heap / 2.5Gi container limit) are sized for a
+  # local Kind cluster and leave no headroom once Confluence is actually doing
+  # work (OSGi plugin/bundle loading, setup wizard rendering) — observed the
+  # container pegged at ~99.9% of its 2.5Gi cgroup limit under real load,
+  # killing Tomcat worker threads mid-response (seen as nginx "upstream
+  # prematurely closed connection" / Cloudflare 502s). Bumped for this
+  # environment, which has the headroom (node: 30Gi RAM, ~16-20Gi free).
+  confluence:
+    resources:
+      jvm:
+        maxHeap: "2048m"
+        minHeap: "2048m"
+        reservedCodeCache: "256m"
+      container:
+        requests:
+          cpu: 2000m
+          memory: 3Gi
+        limits:
+          cpu: 3
+          memory: 4Gi
+
   database:
     url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/confluence"
   # Ensures the "confluence" database/role exist on the shared RDS instance
