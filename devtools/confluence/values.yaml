@@ -9,6 +9,14 @@ confluence:
   # killing Tomcat worker threads mid-response (seen as nginx "upstream
   # prematurely closed connection" / Cloudflare 502s). Bumped for this
   # environment, which has the headroom (node: 30Gi RAM, ~16-20Gi free).
+  #
+  # cpu.requests also drives this chart's auto-computed -XX:ActiveProcessorCount
+  # (floor of container.requests.cpu, see charts/confluence/templates/config-jvm.yaml).
+  # At 2000m -> ActiveProcessorCount=2, Confluence intermittently hit
+  # "Spring Application context has not been set" during PluginFrameworkContextListener
+  # startup (a race between the plugin framework listener and the async Spring root
+  # context bootstrap) — failed on 4 of 5 observed boots. Raising to 3 gives that
+  # async bootstrap more concurrency to win the race consistently.
   confluence:
     resources:
       jvm:
@@ -17,10 +25,10 @@ confluence:
         reservedCodeCache: "256m"
       container:
         requests:
-          cpu: 2000m
+          cpu: 3000m
           memory: 3Gi
         limits:
-          cpu: 3
+          cpu: 4
           memory: 4Gi
 
   database:
