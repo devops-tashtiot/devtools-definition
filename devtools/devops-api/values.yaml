@@ -1,0 +1,12 @@
+# Overrides for the devops-api umbrella chart.
+# Merged on top of devtools-provision/devtools/devops-api/values.yaml by ArgoCD.
+#
+# image.repository/tag reference GitHub Releases published from
+# https://github.com/devops-tashtiot/devops-api — bump image.tag here to
+# roll out a new release.
+
+example-fast-api:
+  image:
+    repository: dns-api
+    tag: "7.0"
+    pullPolicy: IfNotPresent
