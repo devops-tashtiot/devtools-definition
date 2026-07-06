@@ -66,6 +66,16 @@ sonarqube:
   # loaded from the sonarqube-oidc-secret-properties Secret (templates/oidc-secret.yaml)
   # instead of going here in plaintext.
   sonarProperties:
+    # Required by sonar-auth-oidc for it to build the redirect_uri it sends
+    # to Keycloak (https://github.com/sonar-auth-oidc/sonar-auth-oidc: "no
+    # trailing slash allowed"). Without this, SonarQube auto-detects its base
+    # URL from the incoming request — but TLS terminates at Cloudflare, not
+    # at the pod (ingress.annotations sets ssl-redirect: false), so the
+    # auto-detected URL doesn't match the sole redirect URI registered on the
+    # "sonarqube" Keycloak client (clusters-definition/clusters/rhbk/values.yaml:
+    # "https://sonarqube.devopstashtiot.page/oauth2/callback/oidc"), and
+    # Keycloak rejects the login with "Invalid parameter: redirect_uri".
+    sonar.core.serverBaseURL: "https://sonarqube.devopstashtiot.page"
     sonar.auth.oidc.enabled: true
     sonar.auth.oidc.issuerUri: "https://rhbk.devopstashtiot.page/realms/devtools"
     sonar.auth.oidc.clientId.secured: "sonarqube"
