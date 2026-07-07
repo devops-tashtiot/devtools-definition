@@ -50,25 +50,27 @@ confluence:
           cpu: 8
           memory: 4Gi
 
-  # devtools-rds is a shared db.t3.micro (max_connections=81, 78 usable after the
-  # rds_reserved superuser reserve). The other 5 devtools alone routinely hold ~70
-  # connections (jira 20, sonarqube 20, artifactory 15, bitbucket 5, rhbk 2, misc 3),
-  # leaving ~8 free. Confluence's own Hikari pool defaults (minimumIdle=20,
-  # maximumPoolSize=100 per confluence.cfg.xml.j2) need far more headroom than that to
-  # even open its pool on Spring context (re)init — this reliably threw
-  # "PSQLException: FATAL: remaining connection slots are reserved for roles with
-  # privileges of the rds_reserved role" -> cascading "Spring Application context has
-  # not been set" on every boot and every setup-wizard DB-config submission on
-  # 2026-07-07, regardless of CPU/cache/config-corruption fixes tried first. Shrinking
-  # the pool via ATL_DB_POOLMINSIZE/POOLMAXSIZE (documented atlassian/confluence image
-  # env vars, see confluence.cfg.xml.j2 in the image) is the actual fix — it's a
-  # symptom of the shared instance being oversubscribed, not something CPU/cache tuning
-  # could ever have solved.
-  additionalEnvironmentVariables:
-    - name: ATL_DB_POOLMINSIZE
-      value: "5"
-    - name: ATL_DB_POOLMAXSIZE
-      value: "15"
+    # devtools-rds is a shared db.t3.micro (max_connections=81, 78 usable after the
+    # rds_reserved superuser reserve). The other 5 devtools alone routinely hold ~70
+    # connections (jira 20, sonarqube 20, artifactory 15, bitbucket 5, rhbk 2, misc 3),
+    # leaving ~8 free. Confluence's own Hikari pool defaults (minimumIdle=20,
+    # maximumPoolSize=100 per confluence.cfg.xml.j2) need far more headroom than that to
+    # even open its pool on Spring context (re)init — this reliably threw
+    # "PSQLException: FATAL: remaining connection slots are reserved for roles with
+    # privileges of the rds_reserved role" -> cascading "Spring Application context has
+    # not been set" on every boot and every setup-wizard DB-config submission on
+    # 2026-07-07, regardless of CPU/cache/config-corruption fixes tried first. Shrinking
+    # the pool via ATL_DB_POOLMINSIZE/POOLMAXSIZE (documented atlassian/confluence image
+    # env vars, see confluence.cfg.xml.j2 in the image) is the actual fix — it's a
+    # symptom of the shared instance being oversubscribed, not something CPU/cache tuning
+    # could ever have solved. This must live under confluence.confluence (not
+    # confluence.additionalEnvironmentVariables) — the vendor subchart double-nests all
+    # container-level settings under its own "confluence:" key, same as .resources above.
+    additionalEnvironmentVariables:
+      - name: ATL_DB_POOLMINSIZE
+        value: "5"
+      - name: ATL_DB_POOLMAXSIZE
+        value: "15"
 
   database:
     url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/confluence"
