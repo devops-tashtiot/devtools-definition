@@ -80,6 +80,15 @@ argo-cd:
       limits:
         cpu: 200m
         memory: 256Mi
+    # kube-prometheus-stack is deployed and its monitoring.coreos.com CRDs
+    # exist on this cluster now — safe to enable the ServiceMonitor Prometheus
+    # Operator picks up automatically (label-selector-based discovery,
+    # kube-prometheus-stack's default serviceMonitorSelector). Feeds
+    # dashboards/argocd.json (see devtools-provision/devtools/argocd).
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
 
   repoServer:
     resources:
@@ -89,6 +98,10 @@ argo-cd:
       limits:
         cpu: 500m
         memory: 512Mi
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
 
   controller:
     resources:
@@ -98,6 +111,10 @@ argo-cd:
       limits:
         cpu: 500m
         memory: 1Gi
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
 
 wrapper:
   ingress:
@@ -117,3 +134,10 @@ wrapper:
   # on the RHBK side via the Admin API — one source of truth, no manual sync
   # needed.
   oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
+
+  # kube-prometheus-stack is deployed with grafana.sidecar.dashboards.enabled
+  # + searchNamespace: ALL (see clusters-definition/clusters/kube-prometheus-stack)
+  # — safe to turn this on now (see devtools-provision/devtools/argocd/values.yaml
+  # for what this renders).
+  grafanaDashboard:
+    enabled: true
