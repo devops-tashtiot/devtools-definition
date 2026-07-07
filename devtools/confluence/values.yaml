@@ -27,10 +27,15 @@ confluence:
   # At 2000m -> ActiveProcessorCount=2, Confluence intermittently hit
   # "Spring Application context has not been set" during PluginFrameworkContextListener
   # startup (a race between the plugin framework listener and the async Spring root
-  # context bootstrap) — failed on 4 of 5 observed boots. Raising to 3 reduced but did
-  # not eliminate the race (still observed failing boots at ActiveProcessorCount=3, e.g.
-  # 2026-07-07). Raised to 4 (matching the existing 4-core limit, so requests==limits)
-  # to give the async bootstrap the most concurrency this container is allowed.
+  # context bootstrap) — failed on 4 of 5 observed boots. Raising to 3, then to 4
+  # (matching the old 4-core limit) still failed 5/5 consecutive boots on 2026-07-07 —
+  # confirmed via /sys/fs/cgroup/cpu.stat that the container was CFS-throttled
+  # (nr_throttled>0, several seconds of throttled_usec) during boot, i.e. it was hitting
+  # the *limit* ceiling, not lacking requested share. Raising ActiveProcessorCount alone
+  # made the JVM spin up more concurrent threads against the same 4-core hard cap, which
+  # made throttling worse. Node has 16 vCPUs total and sits well under 1.0 load average,
+  # so headroom exists — raised limits.cpu to 8 to remove the throttling ceiling above
+  # the ActiveProcessorCount=4 the JVM now plans concurrency around.
   confluence:
     resources:
       jvm:
@@ -42,7 +47,7 @@ confluence:
           cpu: 4000m
           memory: 3Gi
         limits:
-          cpu: 4
+          cpu: 8
           memory: 4Gi
 
   database:
@@ -94,11 +99,12 @@ confluence:
       persistentVolumeClaim:
         storageClassName: standard
 
-confluenceSecrets:
-  # License is stored in AWS SSM Parameter Store (SecureString), not here —
-  # requires the external-secrets-operator devtool + ClusterSecretStore.
-  licenseSsmParameter: "/devtools/confluence/license"
+wrapper:
+  confluenceSecrets:
+    # License is stored in AWS SSM Parameter Store (SecureString), not here —
+    # requires the external-secrets-operator devtool + ClusterSecretStore.
+    licenseSsmParameter: "/devtools/confluence/license"
 
-rdsAdmin:
-  usernameSsmParameter: "/devtools/rds/admin-username"
-  passwordSsmParameter: "/devtools/rds/admin-password"
+  rdsAdmin:
+    usernameSsmParameter: "/devtools/rds/admin-username"
+    passwordSsmParameter: "/devtools/rds/admin-password"

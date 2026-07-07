@@ -87,23 +87,24 @@ xray:
     masterKey: "24796f27c35ba50959f002cd4250e96620a2b229367dcc14eb6fc4e16ce1b8f7"
     joinKey: "084ac541e4965eda8498fe8a7c148cce"
 
-xraySecrets:
-  # username/password are NOT set here — sourced directly from the rdsAdmin
-  # SSM params below via the xray-db-credentials ExternalSecret (see
-  # devtools-provision/devtools/xray/templates/secrets.yaml). Same
-  # shared-admin-user pattern as bitbucket/confluence/jira/sonarqube/artifactory.
-  db:
-    # NOTE: Xray's system.yaml expects the native "postgres://" scheme, not
-    # Artifactory's "jdbc:postgresql://" — see the two charts' files/system.yaml.
-    # sslmode=require (not disable): the shared devtools-rds instance's
-    # parameter group has rds.force_ssl=1, so a plaintext connection is
-    # rejected by pg_hba.conf ("no pg_hba.conf entry ... no encryption") —
-    # confirmed by the identical failure on Artifactory's "metadata" service
-    # (see devtools-definition/devtools/artifactory/values.yaml). Xray's own
-    # Postgres client hasn't hit this yet only because the pre-upgrade hook
-    # above has always blocked it from ever starting.
-    url: "postgres://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/xray?sslmode=require"
+wrapper:
+  xraySecrets:
+    # username/password are NOT set here — sourced directly from the rdsAdmin
+    # SSM params below via the xray-db-credentials ExternalSecret (see
+    # devtools-provision/devtools/xray/templates/secrets.yaml). Same
+    # shared-admin-user pattern as bitbucket/confluence/jira/sonarqube/artifactory.
+    db:
+      # NOTE: Xray's system.yaml expects the native "postgres://" scheme, not
+      # Artifactory's "jdbc:postgresql://" — see the two charts' files/system.yaml.
+      # sslmode=require (not disable): the shared devtools-rds instance's
+      # parameter group has rds.force_ssl=1, so a plaintext connection is
+      # rejected by pg_hba.conf ("no pg_hba.conf entry ... no encryption") —
+      # confirmed by the identical failure on Artifactory's "metadata" service
+      # (see devtools-definition/devtools/artifactory/values.yaml). Xray's own
+      # Postgres client hasn't hit this yet only because the pre-upgrade hook
+      # above has always blocked it from ever starting.
+      url: "postgres://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/xray?sslmode=require"
 
-rdsAdmin:
-  usernameSsmParameter: "/devtools/rds/admin-username"
-  passwordSsmParameter: "/devtools/rds/admin-password"
+  rdsAdmin:
+    usernameSsmParameter: "/devtools/rds/admin-username"
+    passwordSsmParameter: "/devtools/rds/admin-password"

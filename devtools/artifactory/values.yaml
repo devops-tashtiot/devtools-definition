@@ -70,28 +70,29 @@ artifactory:
             psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
               "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
 
-artifactorySecrets:
-  # License intentionally left empty — see note at top of this file.
-  license: ""
-  licenseSsmParameter: ""
-  admin:
-    username: "admin"
-  # Shared admin password across every devtool on this platform.
-  adminPasswordSsmParameter: "/devtools/admin/password"
-  # username/password are NOT set here — sourced directly from the rdsAdmin
-  # SSM params below via the artifactory-db-credentials ExternalSecret (see
-  # devtools-provision/devtools/artifactory/templates/secrets.yaml). Same
-  # shared-admin-user pattern as bitbucket/confluence/jira/sonarqube.
-  db:
-    # sslmode=require: the shared devtools-rds instance's parameter group has
-    # rds.force_ssl=1, so a non-SSL connection is rejected by pg_hba.conf with
-    # "no pg_hba.conf entry ... no encryption". The main Artifactory (JDBC)
-    # container tolerates this silently because pgjdbc's default sslmode is
-    # "prefer", but the split-container "metadata" service's Go Postgres
-    # client defaults to no SSL and was crash-looping on exactly this error —
-    # forcing SSL here fixes it for every service reading this shared URL.
-    url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory?sslmode=require"
+wrapper:
+  artifactorySecrets:
+    # License intentionally left empty — see note at top of this file.
+    license: ""
+    licenseSsmParameter: ""
+    admin:
+      username: "admin"
+    # Shared admin password across every devtool on this platform.
+    adminPasswordSsmParameter: "/devtools/admin/password"
+    # username/password are NOT set here — sourced directly from the rdsAdmin
+    # SSM params below via the artifactory-db-credentials ExternalSecret (see
+    # devtools-provision/devtools/artifactory/templates/secrets.yaml). Same
+    # shared-admin-user pattern as bitbucket/confluence/jira/sonarqube.
+    db:
+      # sslmode=require: the shared devtools-rds instance's parameter group has
+      # rds.force_ssl=1, so a non-SSL connection is rejected by pg_hba.conf with
+      # "no pg_hba.conf entry ... no encryption". The main Artifactory (JDBC)
+      # container tolerates this silently because pgjdbc's default sslmode is
+      # "prefer", but the split-container "metadata" service's Go Postgres
+      # client defaults to no SSL and was crash-looping on exactly this error —
+      # forcing SSL here fixes it for every service reading this shared URL.
+      url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory?sslmode=require"
 
-rdsAdmin:
-  usernameSsmParameter: "/devtools/rds/admin-username"
-  passwordSsmParameter: "/devtools/rds/admin-password"
+  rdsAdmin:
+    usernameSsmParameter: "/devtools/rds/admin-username"
+    passwordSsmParameter: "/devtools/rds/admin-password"

@@ -99,20 +99,21 @@ argo-cd:
         cpu: 500m
         memory: 1Gi
 
-ingress:
-  enabled: true
-  host: argocd.devopstashtiot.page
+wrapper:
+  ingress:
+    enabled: true
+    host: argocd.devopstashtiot.page
 
-# Shared admin password across argocd/bitbucket/confluence — see
-# devtools-provision/devtools/argocd/templates/argocd-admin-secret.yaml
-adminPasswordSsmParameter: "/devtools/admin/password"
+  # Shared admin password across argocd/bitbucket/confluence — see
+  # devtools-provision/devtools/argocd/templates/argocd-admin-secret.yaml
+  adminPasswordSsmParameter: "/devtools/admin/password"
 
-# RHBK-issued OIDC client secret for ArgoCD — see
-# devtools-provision/devtools/argocd/templates/oidc-secret.yaml. This is the
-# same shared SSM parameter (one value for argocd/sonarqube/jira/confluence/
-# bitbucket — see clusters-provision/clusters/rhbk/values.yaml's
-# sharedClientSecretSsmParameter) clusters-provision/clusters/rhbk's
-# set-client-secrets-job.yaml reads to set the actual secret on every client
-# on the RHBK side via the Admin API — one source of truth, no manual sync
-# needed.
-oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
+  # RHBK-issued OIDC client secret for ArgoCD — see
+  # devtools-provision/devtools/argocd/templates/oidc-secret.yaml. This is the
+  # same shared SSM parameter (one value for argocd/sonarqube/jira/confluence/
+  # bitbucket — see clusters-provision/clusters/rhbk/values.yaml's
+  # sharedClientSecretSsmParameter) clusters-provision/clusters/rhbk's
+  # set-client-secrets-job.yaml reads to set the actual secret on every client
+  # on the RHBK side via the Admin API — one source of truth, no manual sync
+  # needed.
+  oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"

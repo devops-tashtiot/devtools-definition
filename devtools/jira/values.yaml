@@ -77,6 +77,7 @@ jira:
       persistentVolumeClaim:
         storageClassName: standard
 
-rdsAdmin:
-  usernameSsmParameter: "/devtools/rds/admin-username"
-  passwordSsmParameter: "/devtools/rds/admin-password"
+wrapper:
+  rdsAdmin:
+    usernameSsmParameter: "/devtools/rds/admin-username"
+    passwordSsmParameter: "/devtools/rds/admin-password"

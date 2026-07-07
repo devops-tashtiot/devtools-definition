@@ -87,22 +87,23 @@ sonarqube:
     sonar.auth.oidc.groupsSync.claimName: "groups"
   sonarSecretProperties: "sonarqube-oidc-secret-properties"
 
-# Shared admin password across argocd/bitbucket/confluence/sonarqube.
-adminPasswordSsmParameter: "/devtools/admin/password"
+wrapper:
+  # Shared admin password across argocd/bitbucket/confluence/sonarqube.
+  adminPasswordSsmParameter: "/devtools/admin/password"
 
-rdsAdmin:
-  usernameSsmParameter: "/devtools/rds/admin-username"
-  passwordSsmParameter: "/devtools/rds/admin-password"
+  rdsAdmin:
+    usernameSsmParameter: "/devtools/rds/admin-username"
+    passwordSsmParameter: "/devtools/rds/admin-password"
 
-# Same shared SSM parameter (one value for argocd/sonarqube/jira/confluence/
-# bitbucket — see clusters-provision/clusters/rhbk/values.yaml's
-# sharedClientSecretSsmParameter) clusters-provision/clusters/rhbk's
-# set-client-secrets-job.yaml reads to set the real value on every client on
-# the RHBK/Keycloak side — one source of truth, no manual sync needed.
-oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
+  # Same shared SSM parameter (one value for argocd/sonarqube/jira/confluence/
+  # bitbucket — see clusters-provision/clusters/rhbk/values.yaml's
+  # sharedClientSecretSsmParameter) clusters-provision/clusters/rhbk's
+  # set-client-secrets-job.yaml reads to set the real value on every client on
+  # the RHBK/Keycloak side — one source of truth, no manual sync needed.
+  oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
 
-# Grants admin to anyone in the devops-tashtiot AD group (see
-# clusters-provision/clusters/rhbk's group-ldap-mapper) rather than
-# individual users — matches the same pattern used for ArgoCD's RBAC.
-adminGroup:
-  name: "devops-tashtiot"
+  # Grants admin to anyone in the devops-tashtiot AD group (see
+  # clusters-provision/clusters/rhbk's group-ldap-mapper) rather than
+  # individual users — matches the same pattern used for ArgoCD's RBAC.
+  adminGroup:
+    name: "devops-tashtiot"

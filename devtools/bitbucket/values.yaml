@@ -79,17 +79,18 @@ bitbucket:
     sharedHome:
       storageClassName: standard
 
-bitbucketSecrets:
-  # License is stored in AWS SSM Parameter Store (SecureString), not here —
-  # requires the external-secrets-operator devtool + ClusterSecretStore.
-  licenseSsmParameter: "/devtools/bitbucket/license"
-  admin:
-    username: admin
-    displayName: "Admin"
-    emailAddress: "netanelzucaim100@gmail.com"
-  # Shared admin password across argocd/bitbucket/confluence.
-  adminPasswordSsmParameter: "/devtools/admin/password"
+wrapper:
+  bitbucketSecrets:
+    # License is stored in AWS SSM Parameter Store (SecureString), not here —
+    # requires the external-secrets-operator devtool + ClusterSecretStore.
+    licenseSsmParameter: "/devtools/bitbucket/license"
+    admin:
+      username: admin
+      displayName: "Admin"
+      emailAddress: "netanelzucaim100@gmail.com"
+    # Shared admin password across argocd/bitbucket/confluence.
+    adminPasswordSsmParameter: "/devtools/admin/password"
 
-rdsAdmin:
-  usernameSsmParameter: "/devtools/rds/admin-username"
-  passwordSsmParameter: "/devtools/rds/admin-password"
+  rdsAdmin:
+    usernameSsmParameter: "/devtools/rds/admin-username"
+    passwordSsmParameter: "/devtools/rds/admin-password"
