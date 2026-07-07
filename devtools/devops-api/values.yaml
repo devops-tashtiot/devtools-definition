@@ -33,15 +33,21 @@ example-fast-api:
   # helper always emits "<release>-<chart>" (no such collapse), giving
   # "sonarqube-sonarqube"; artifactory collapses like bitbucket/confluence/jira.
   env:
+    # Point at the in-cluster MinIO devtool (clusters-provision/clusters/minio)
+    # instead of localhost (local dev) or real AWS S3 — its
+    # "platform-clients"/"platform-devops-team" buckets are anonymous
+    # public-read/write (mc anonymous set public), so devops-api's existing
+    # httpx-based fetch/upload code works unchanged, just against
+    # minio.minio.svc.cluster.local instead of localhost:9100.
     ARTIFACTORY_API_URL: "http://artifactory.artifactory.svc.cluster.local:8082"
     ARTIFACTORY_LDAP_SETTING_NAME: "ldap-ad"
-
+    ARTIFACTORY_S3_XRAY_UPDATES_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-devops-team/xray-vulnerability-updates"
 
     BITBUCKET_API_URL: "http://bitbucket.bitbucket.svc.cluster.local"
 
     CONFLUENCE_API_URL: "http://confluence.confluence.svc.cluster.local"
-    CONFLUENCE_S3_PLUGINS_BASE_URL: "http://localhost:9100/platform-clients/confluence-plugins"
-    CONFLUENCE_S3_IMPORTS_BASE_URL: "http://localhost:9100/platform-clients/confluence-space-imports"
+    CONFLUENCE_S3_PLUGINS_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-clients/confluence-plugins"
+    CONFLUENCE_S3_IMPORTS_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-clients/confluence-space-imports"
 
     JIRA_API_URL: "http://jira.jira.svc.cluster.local"
 
