@@ -82,13 +82,18 @@ argo-cd:
         memory: 256Mi
     # kube-prometheus-stack is deployed and its monitoring.coreos.com CRDs
     # exist on this cluster now — safe to enable the ServiceMonitor Prometheus
-    # Operator picks up automatically (label-selector-based discovery,
-    # kube-prometheus-stack's default serviceMonitorSelector). Feeds
-    # dashboards/argocd.json (see devtools-provision/devtools/argocd).
+    # Operator picks up automatically. Its Prometheus CR's serviceMonitorSelector
+    # is matchLabels: {release: kube-prometheus-stack} (serviceMonitorSelectorNilUsesHelmValues,
+    # not the {} match-all shown as an example in the chart's own values.yaml
+    # comments — confirmed against the live Prometheus CR), so additionalLabels
+    # below is required or these ServiceMonitors are silently never scraped.
+    # Feeds dashboards/argocd.json (see devtools-provision/devtools/argocd).
     metrics:
       enabled: true
       serviceMonitor:
         enabled: true
+        additionalLabels:
+          release: kube-prometheus-stack
 
   repoServer:
     resources:
@@ -102,6 +107,8 @@ argo-cd:
       enabled: true
       serviceMonitor:
         enabled: true
+        additionalLabels:
+          release: kube-prometheus-stack
 
   controller:
     resources:
@@ -115,6 +122,8 @@ argo-cd:
       enabled: true
       serviceMonitor:
         enabled: true
+        additionalLabels:
+          release: kube-prometheus-stack
 
 wrapper:
   ingress:
