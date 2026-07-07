@@ -4,9 +4,20 @@
 
 xray:
   common:
-    # Ensures the "xray" database/role exist on the shared RDS instance
-    # before Xray starts — idempotent, safe to re-run on every pod restart.
-    # Same pattern as devtools-definition/devtools/artifactory/values.yaml.
+    # Ensures the "xray" database exists on the shared RDS instance before
+    # Xray starts — idempotent, safe to re-run on every pod restart. Connects
+    # (and owns the DB) as the shared RDS admin user, same as
+    # bitbucket/confluence/jira/artifactory's init containers — no per-tool
+    # role. Previously this created/managed a dedicated "devtools-apps" role
+    # with its own password via CREATE ROLE/ALTER ROLE; that collided with
+    # Artifactory, which independently ran the identical ALTER ROLE dance
+    # against the SAME role name ("devtools-apps") with a DIFFERENT hardcoded
+    # password ("artifactory-db-2024" vs this tool's old "xray-db-2024") on
+    # every pod restart — whichever tool restarted last silently overwrote
+    # the other's password, causing Postgres "password authentication
+    # failed" crash loops. Fixed for artifactory in
+    # devtools-provision@c088577 / devtools-definition@d56e1da; this converts
+    # xray the same way.
     customInitContainersBegin: |
       - name: ensure-postgres-db
         image: postgres:17-alpine
@@ -27,35 +38,19 @@ xray:
                 key: password
           - name: APP_DB_NAME
             value: "xray"
-          - name: APP_DB_USER
-            valueFrom:
-              secretKeyRef:
-                name: xray-db
-                key: username
-          - name: APP_DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: xray-db
-                key: password
         command:
           - /bin/sh
           - -c
           - |
             set -eu
-            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
-              "SELECT 1 FROM pg_roles WHERE rolname = '$APP_DB_USER'" | grep -q 1 || \
-            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-              "CREATE ROLE \"$APP_DB_USER\" LOGIN PASSWORD '$APP_DB_PASSWORD';"
-            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-              "ALTER ROLE \"$APP_DB_USER\" WITH PASSWORD '$APP_DB_PASSWORD';"
-            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-              "GRANT \"$APP_DB_USER\" TO \"$ADMIN_USER\";"
+            # Every devtool connects as the shared RDS admin user (see
+            # rds-admin-credentials / xray-db, both sourced from the same
+            # SSM params) — no per-tool role, so nothing to CREATE ROLE or
+            # GRANT here, just make sure the database itself exists.
             psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
               "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
             psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-              "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$APP_DB_USER\";"
-            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-              "GRANT ALL PRIVILEGES ON DATABASE \"$APP_DB_NAME\" TO \"$APP_DB_USER\";"
+              "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
 
   # Xray's bundled RabbitMQ (its own internal task queue, not the shared
   # RDS) refuses to install with the chart's default password.
@@ -93,9 +88,11 @@ xray:
     joinKey: "084ac541e4965eda8498fe8a7c148cce"
 
 xraySecrets:
+  # username/password are NOT set here — sourced directly from the rdsAdmin
+  # SSM params below via the xray-db-credentials ExternalSecret (see
+  # devtools-provision/devtools/xray/templates/secrets.yaml). Same
+  # shared-admin-user pattern as bitbucket/confluence/jira/sonarqube/artifactory.
   db:
-    username: "devtools-apps"
-    password: "xray-db-2024"
     # NOTE: Xray's system.yaml expects the native "postgres://" scheme, not
     # Artifactory's "jdbc:postgresql://" — see the two charts' files/system.yaml.
     # sslmode=require (not disable): the shared devtools-rds instance's
