@@ -27,8 +27,10 @@ confluence:
   # At 2000m -> ActiveProcessorCount=2, Confluence intermittently hit
   # "Spring Application context has not been set" during PluginFrameworkContextListener
   # startup (a race between the plugin framework listener and the async Spring root
-  # context bootstrap) — failed on 4 of 5 observed boots. Raising to 3 gives that
-  # async bootstrap more concurrency to win the race consistently.
+  # context bootstrap) — failed on 4 of 5 observed boots. Raising to 3 reduced but did
+  # not eliminate the race (still observed failing boots at ActiveProcessorCount=3, e.g.
+  # 2026-07-07). Raised to 4 (matching the existing 4-core limit, so requests==limits)
+  # to give the async bootstrap the most concurrency this container is allowed.
   confluence:
     resources:
       jvm:
@@ -37,7 +39,7 @@ confluence:
         reservedCodeCache: "256m"
       container:
         requests:
-          cpu: 3000m
+          cpu: 4000m
           memory: 3Gi
         limits:
           cpu: 4
