@@ -14,6 +14,17 @@ artifactory:
   artifactory:
     persistence:
       storageClassName: standard
+      # Binary blobs (the actual artifact content) live in S3, not the local
+      # hostPath PVC above — that PVC still holds etc/work/logs only. Bucket
+      # is private (all public access blocked, SSE-S3 default encryption);
+      # the minikube EC2 instance's role has an inline policy
+      # (minikube-artifactory-s3-binarystore) scoped to just this bucket
+      # granting GetObject/PutObject/DeleteObject/ListBucket — no static AWS
+      # keys anywhere, same convention as devops-api's IMDS-based access.
+      type: s3-storage-v3-direct
+      awsS3V3:
+        bucketName: "devtools-artifactory-binaries-342831714456"
+        region: "il-central-1"
 
     # Shared with the xray devtool (devtools-definition/devtools/xray/values.yaml)
     # so Xray can join this Artifactory instance's Access federation — both
