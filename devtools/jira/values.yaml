@@ -18,25 +18,33 @@ jira:
   # allocatable — see devtools-labs/terraform/live/devtools/minikube
   # /terragrunt.hcl) so Confluence + Bitbucket + Jira requests don't eat the
   # whole node and starve ArgoCD/ingress-nginx/Artifactory/SonarQube.
+  # ingress.https stays false (TLS terminates at Cloudflare, not in-cluster —
+  # see devtools-provision/CLAUDE.md), so the chart's own
+  # `{{ if .Values.ingress.https }} ATL_TOMCAT_SCHEME/ATL_TOMCAT_SECURE
+  # {{ end }}` block in templates/statefulset.yaml never fires, and
+  # ATL_PROXY_PORT (set unconditionally once ingress.host is set) resolves to
+  # 80 via the jira.ingressPort helper (`default (ternary "443" "80"
+  # .Values.ingress.https) .Values.ingress.port`). Jira then computes every
+  # request as plain http://jira.devopstashtiot.page:80 while the browser is
+  # actually on https://.../443 via Cloudflare. That scheme/port mismatch is
+  # what Jira's Base URL vs. request-URL comparison trips on, producing "XSRF
+  # check failed" on POSTs (e.g. create project) and silently breaking the
+  # admin cog's AJAX-built nav (blocked as mixed content).
+  #
+  # Override ingress.port directly so the existing ATL_PROXY_PORT env var
+  # (already emitted by the chart) resolves to 443 — don't also add
+  # ATL_PROXY_PORT under jira.jira.additionalEnvironmentVariables, that
+  # produces a duplicate env key and breaks ArgoCD's structured merge diff
+  # entirely (confirmed: "duplicate entries for key [name=\"ATL_PROXY_PORT\"]").
+  ingress:
+    port: "443"
+
   jira:
-    # ingress.https stays false (TLS terminates at Cloudflare, not in-cluster
-    # — see devtools-provision/CLAUDE.md), so the chart's own
-    # `{{ if .Values.ingress.https }} ATL_TOMCAT_SCHEME/ATL_TOMCAT_SECURE
-    # {{ end }}` block in templates/statefulset.yaml never fires, and
-    # ATL_PROXY_PORT falls back to 80 (jira.ingressPort helper). Jira then
-    # computes every request as plain http://jira.devopstashtiot.page:80
-    # while the browser is actually on https://.../443 via Cloudflare. That
-    # scheme/port mismatch is what Jira's Base URL vs. request-URL comparison
-    # trips on, producing "XSRF check failed" on POSTs (e.g. create project)
-    # and silently breaking the admin cog's AJAX-built nav (blocked as mixed
-    # content). Override explicitly so Jira sees the proxy correctly.
     additionalEnvironmentVariables:
       - name: ATL_TOMCAT_SCHEME
         value: "https"
       - name: ATL_TOMCAT_SECURE
         value: "true"
-      - name: ATL_PROXY_PORT
-        value: "443"
     resources:
       jvm:
         maxHeap: "2048m"
