@@ -1,14 +1,12 @@
-# Overrides for Artifactory Data Center 7.117.15 running on the minikube-on-EC2 cluster.
+# Overrides for Artifactory OSS 7.117.15 running on the minikube-on-EC2 cluster.
 # Cloudflare tunnel: artifactory.devopstashtiot.page → nginx-ingress → artifactory
 #
-# NOTE — deployed unlicensed (no JFrog license configured yet): Artifactory
-# will boot in OSS/trial mode, and Xray cannot fully activate against it
-# without an Enterprise+ license. To license it later:
-#   1. aws ssm put-parameter --name "/devtools/artifactory/license" \
-#        --value "<license text>" --type SecureString --region il-central-1
-#   2. Set artifactorySecrets.licenseSsmParameter below to that path.
-#   3. Set artifactory.artifactory.license.secret: artifactory-license and
-#      .dataKey: artifactory.lic below (mirrors the admin block already wired).
+# NOTE — OSS edition, no JFrog license (see image.repository override in
+# devtools-provision/devtools/artifactory/values.yaml): Xray's Access
+# Federation with this instance (masterKey/joinKey below) requires an
+# Enterprise+ licensed Artifactory and will not activate against OSS. Xray
+# stays deployed anyway (accepted tradeoff) — see
+# devtools-definition/devtools/xray/values.yaml.
 
 artifactory:
   artifactory:
