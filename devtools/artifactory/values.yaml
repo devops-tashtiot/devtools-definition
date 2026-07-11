@@ -12,17 +12,17 @@ artifactory:
   artifactory:
     persistence:
       storageClassName: standard
-      # Binary blobs (the actual artifact content) live in S3, not the local
-      # hostPath PVC above — that PVC still holds etc/work/logs only. Bucket
-      # is private (all public access blocked, SSE-S3 default encryption);
-      # the minikube EC2 instance's role has an inline policy
-      # (minikube-artifactory-s3-binarystore) scoped to just this bucket
-      # granting GetObject/PutObject/DeleteObject/ListBucket — no static AWS
-      # keys anywhere, same convention as devops-api's IMDS-based access.
-      type: s3-storage-v3-direct
-      awsS3V3:
-        bucketName: "devtools-artifactory-binaries-342831714456"
-        region: "il-central-1"
+      # S3 binary storage (s3-storage-v3-direct, bucket
+      # devtools-artifactory-binaries-342831714456) is NOT usable here anymore:
+      # it requires a JCR/Pro/Enterprise+ license — the OSS binary doesn't even
+      # ship the S3 binary-provider class, so Artifactory crash-looped on
+      # startup ("Failed to initiate binary provider" / "binaryProviderClass
+      # is null") the moment this instance switched to OSS. Falls back to the
+      # provision chart's file-system default — the local hostPath PVC above
+      # now holds actual artifact content too, not just etc/work/logs.
+      # Re-add the s3-storage-v3-direct override (still valid — the S3 bucket
+      # and instance IAM policy are untouched) if this instance ever gets a
+      # license again.
 
     # Shared with the xray devtool (devtools-definition/devtools/xray/values.yaml)
     # so Xray can join this Artifactory instance's Access federation — both
