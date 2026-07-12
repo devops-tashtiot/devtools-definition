@@ -1,28 +1,25 @@
-# Overrides for Artifactory OSS 7.117.15 running on the minikube-on-EC2 cluster.
+# Overrides for Artifactory Data Center 7.117.15 running on the
+# minikube-on-EC2 cluster.
 # Cloudflare tunnel: artifactory.devopstashtiot.page → nginx-ingress → artifactory
 #
-# NOTE — OSS edition, no JFrog license (see image.repository override in
-# devtools-provision/devtools/artifactory/values.yaml): Xray's Access
-# Federation with this instance (masterKey/joinKey below) requires an
-# Enterprise+ licensed Artifactory and will not activate against OSS. Xray
-# stays deployed anyway (accepted tradeoff) — see
+# Pro/Enterprise+ edition, licensed via SSM — see wrapper.artifactorySecrets
+# below. This also re-enables Xray's Access Federation with this instance
+# (masterKey/joinKey below), which requires an Enterprise+ licensed
+# Artifactory and does not work against OSS — see
 # devtools-definition/devtools/xray/values.yaml.
 
 artifactory:
   artifactory:
     persistence:
       storageClassName: standard
-      # S3 binary storage (s3-storage-v3-direct, bucket
-      # devtools-artifactory-binaries-342831714456) is NOT usable here anymore:
-      # it requires a JCR/Pro/Enterprise+ license — the OSS binary doesn't even
-      # ship the S3 binary-provider class, so Artifactory crash-looped on
-      # startup ("Failed to initiate binary provider" / "binaryProviderClass
-      # is null") the moment this instance switched to OSS. Falls back to the
-      # provision chart's file-system default — the local hostPath PVC above
-      # now holds actual artifact content too, not just etc/work/logs.
-      # Re-add the s3-storage-v3-direct override (still valid — the S3 bucket
-      # and instance IAM policy are untouched) if this instance ever gets a
-      # license again.
+      type: s3-storage-v3-direct
+      awsS3V3:
+        bucketName: "devtools-artifactory-binaries-342831714456"
+        region: "il-central-1"
+
+    license:
+      secret: artifactory-license
+      dataKey: artifactory.lic
 
     # Shared with the xray devtool (devtools-definition/devtools/xray/values.yaml)
     # so Xray can join this Artifactory instance's Access federation — both
@@ -81,9 +78,11 @@ artifactory:
 
 wrapper:
   artifactorySecrets:
-    # License intentionally left empty — see note at top of this file.
     license: ""
-    licenseSsmParameter: ""
+    # SSM Parameter Store path (SecureString) holding the real JFrog license
+    # text. See devtools-provision/devtools/artifactory/templates/secrets.yaml
+    # for how this populates the artifactory-license Secret referenced above.
+    licenseSsmParameter: "/devtools/artifactory/license"
     admin:
       username: "admin"
     # Shared admin password across every devtool on this platform.
