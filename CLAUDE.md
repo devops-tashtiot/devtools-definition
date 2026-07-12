@@ -30,6 +30,18 @@ Currently tracked tools:
 |---|---|
 | `devtools/argocd/` | LoadBalancer service type, NLB annotations, resource limits for EKS |
 
+## `devtools/devops-api/values.yaml` — image tag is bot-managed, don't hand-edit it
+
+Unlike every other tool here, `devops-api`'s `image.tag` is **automatically overwritten** by
+a GitHub Actions workflow in the `devops-api` repo
+(`.github/workflows/docker-publish.yml`) on every push to its `master` — the bot bumps the
+version, builds+pushes the image to GHCR, then clones this repo and pushes the new tag into
+`devtools/devops-api/values.yaml` itself. If you edit that `tag:` line by hand around the
+same time as someone pushes to `devops-api`, expect a race — the bot's commit will land
+independently and can clobber a manual edit (or vice versa). See `devops-api/CLAUDE.md`'s CI
+section for the full flow. Every other tool's `image.tag` in this repo is still bumped
+manually as normal.
+
 ## Adding Overrides for a New Tool
 
 1. Create `devtools/<toolname>/values.yaml`
