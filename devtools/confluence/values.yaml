@@ -37,12 +37,14 @@ confluence:
   # so headroom exists — raised limits.cpu to 8 to remove the throttling ceiling above
   # the ActiveProcessorCount=4 the JVM now plans concurrency around.
   confluence:
-    # TEMPORARY — Confluence Data Center disables plugin upload via UPM by default for
-    # security (confirmed live: POST /rest/plugins/1.0/?token=... 403s "Plugins cannot be
-    # installed via upload" even with a valid token, regardless of caller). This is required
-    # only to verify devops-api's plugin install/upload flow end-to-end; per Atlassian's own
-    # guidance this should NOT be left on permanently — remove this override and restart
-    # Confluence again once verification is done.
+    # Confluence Data Center disables plugin upload via UPM by default for security
+    # (confirmed live: POST /rest/plugins/1.0/?token=... 403s "Plugins cannot be installed
+    # via upload" even with a valid token, regardless of caller). devops-api's plugin
+    # install flow (app/v1/confluence/operations.py: install_plugin) depends on upload
+    # being enabled — kept on permanently by deliberate choice, not just for one-off
+    # verification. Atlassian's docs warn against leaving this on if you don't trust who
+    # can reach the UPM upload endpoint; this instance restricts it to the shared
+    # svc-devops-tashtiot service account via devops-api, which is the intended caller.
     additionalJvmArgs:
       - "-Dupm.plugin.upload.enabled=true"
 
