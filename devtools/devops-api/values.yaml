@@ -8,7 +8,7 @@
 example-fast-api:
   image:
     repository: ghcr.io/devops-tashtiot/devops-api
-    tag: "check-api-3a22e61"
+    tag: "check-api-f10eec6"
     pullPolicy: IfNotPresent
 
   # Per-environment values for the minikube-on-EC2 cluster — placeholders in
