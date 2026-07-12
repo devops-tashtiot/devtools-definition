@@ -2,11 +2,18 @@
 # minikube-on-EC2 cluster.
 # Cloudflare tunnel: artifactory.devopstashtiot.page → nginx-ingress → artifactory
 #
-# Pro/Enterprise+ edition, licensed via SSM — see wrapper.artifactorySecrets
-# below. This also re-enables Xray's Access Federation with this instance
-# (masterKey/joinKey below), which requires an Enterprise+ licensed
-# Artifactory and does not work against OSS — see
-# devtools-definition/devtools/xray/values.yaml.
+# Pro/Enterprise+ edition (jfrog/artifactory-pro image), but intentionally
+# UNLICENSED at deploy time: license.secret/dataKey and
+# wrapper.artifactorySecrets.licenseSsmParameter are left unset below (the
+# /devtools/artifactory/license SSM parameter does not exist yet), so the
+# chart's artifactory-license Secret/ExternalSecret and pod volume mount are
+# never created (see templates/secrets.yaml + artifactory-statefulset.yaml's
+# `if .Values.artifactory.license.secret` guards) and the pod starts without
+# waiting on it. Add a real license through the running app's own Admin UI
+# after first boot, or re-add licenseSsmParameter here once
+# /devtools/artifactory/license is populated in SSM. Until a license is
+# active, Xray's Access Federation with this instance (masterKey/joinKey
+# below) won't establish — see devtools-definition/devtools/xray/values.yaml.
 
 artifactory:
   artifactory:
@@ -17,9 +24,9 @@ artifactory:
         bucketName: "devtools-artifactory-binaries-342831714456"
         region: "il-central-1"
 
-    license:
-      secret: artifactory-license
-      dataKey: artifactory.lic
+    # license intentionally left unset — see header comment. Falls back to
+    # devtools-provision's base default (license: {}), so no license volume
+    # is mounted and the pod doesn't wait on a secret that doesn't exist.
 
     # Shared with the xray devtool (devtools-definition/devtools/xray/values.yaml)
     # so Xray can join this Artifactory instance's Access federation — both
@@ -79,10 +86,12 @@ artifactory:
 wrapper:
   artifactorySecrets:
     license: ""
-    # SSM Parameter Store path (SecureString) holding the real JFrog license
-    # text. See devtools-provision/devtools/artifactory/templates/secrets.yaml
-    # for how this populates the artifactory-license Secret referenced above.
-    licenseSsmParameter: "/devtools/artifactory/license"
+    # SSM Parameter Store path (SecureString) that would hold the real JFrog
+    # license text — left unset for now (see header comment). Setting this
+    # once /devtools/artifactory/license exists in SSM re-enables the
+    # artifactory-license ExternalSecret in
+    # devtools-provision/devtools/artifactory/templates/secrets.yaml.
+    licenseSsmParameter: ""
     admin:
       username: "admin"
     # Shared admin password across every devtool on this platform.
