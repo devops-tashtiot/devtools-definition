@@ -54,7 +54,7 @@ example-fast-api:
     SONARQUBE_API_URL: "http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000"
 
     ARGOCD_ALLOWED_ENVS: '["prod","dr","int"]'
-    ARGOCD_CLUSTER_SECRET_REPO_URL: "http://gitea-http.gitea.svc.cluster.local:3000/netanelzucaim/devtools-provision.git"
+    ARGOCD_CLUSTER_SECRET_REPO_URL: "http://bitbucket.bitbucket.svc.cluster.local/scm/argo/argocd.git"
 
     GIT_API_URL: "http://bitbucket.bitbucket.svc.cluster.local/rest/api/1.0"
     GIT_TOKEN: "" # set out-of-band, not committed to git

@@ -33,6 +33,13 @@ bitbucket:
         limits:
           cpu: "3"
           memory: "5Gi"
+    # Public access is globally disabled by default since Bitbucket DC 8.18 — this is the
+    # only way to enable it (no REST endpoint; confirmed by 404s on /admin/permissions/anonymous
+    # and /admin/settings against a SYS_ADMIN token). -D<property>=<value> JVM args map
+    # directly to bitbucket.properties keys in Atlassian DC apps.
+    # https://confluence.atlassian.com/bitbucketserver/allowing-public-access-to-code
+    additionalJvmArgs:
+      - "-Dfeature.public.access=true"
 
   database:
     url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/bitbucket"
