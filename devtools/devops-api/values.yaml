@@ -57,9 +57,21 @@ example-fast-api:
     ARGOCD_CLUSTER_SECRET_REPO_URL: "http://bitbucket.bitbucket.svc.cluster.local/scm/argo/argocd.git"
 
     GIT_API_URL: "http://bitbucket.bitbucket.svc.cluster.local/rest/api/1.0"
-    GIT_TOKEN: "" # set out-of-band, not committed to git
     GIT_PROJECT_KEY: "ARGO"
     GIT_SSH_KEY_PATH: "/root/.ssh/id_ed25519"
     GIT_SSH_PORT: "7999"
 
     DOMAIN_SUFFIX: "devopstashtiot.page"
+
+  # GIT_TOKEN was previously a plaintext empty string here ("set out-of-band, not
+  # committed to git") — the Git connector's Bearer-auth path sent it verbatim as
+  # `Authorization: Bearer ` (empty), which httpx rejects as an illegal header value.
+  # Sourced from SSM now instead, matching the platform's SSM SecureString + ExternalSecret
+  # convention (see devtools-provision/CLAUDE.md).
+  vault:
+    enabled: true
+    clusterSecretStore: aws-parameter-store
+    secrets:
+      - secretKey: GIT_TOKEN
+        remoteRef:
+          key: /devtools/bitbucket/api-token
