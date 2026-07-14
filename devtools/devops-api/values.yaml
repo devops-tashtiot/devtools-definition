@@ -14,24 +14,55 @@ example-fast-api:
   # Per-environment values for the minikube-on-EC2 cluster — placeholders in
   # devtools-provision/devtools/devops-api/values.yaml, filled in here.
   #
-  # *_API_URL values below point at each tool's in-cluster Service DNS
-  # (<service>.<namespace>.svc.cluster.local), not its public
-  # *.devopstashtiot.page hostname. devops-api runs as a pod in this same
-  # cluster (see devtools-provision/devtools/devops-api), so routing its
-  # calls out through the public hostname would bounce them through the
-  # Cloudflare Tunnel and hit Cloudflare Access's interactive email-verify
-  # page — Access is enforced at Cloudflare's edge before the tunnel ever
-  # reaches this cluster's ingress, so there is no ingress-side header
-  # (e.g. a CF-Access-Client-Id/Secret service token) that can satisfy it
-  # after the fact. Calling the Service DNS directly stays on the pod
-  # network and never touches the tunnel or Access at all. Service names/
-  # ports below come from each chart's fullname helper + default
-  # service port (see devtools-provision/devtools/<tool>/charts/<tool>):
-  # bitbucket/confluence/jira use Bitnami's common.names.fullname, which
-  # collapses to the bare release name (= namespace name) since the
-  # release name already contains the chart name; sonarqube's own fullname
-  # helper always emits "<release>-<chart>" (no such collapse), giving
-  # "sonarqube-sonarqube"; artifactory collapses like bitbucket/confluence/jira.
+  # *_API_URL values below now point at each tool's REAL public
+  # *.devopstashtiot.page hostname — not the raw in-cluster Service DNS
+  # (<service>.<namespace>.svc.cluster.local) they used before 2026-07-14.
+  #
+  # Why they were on Service DNS originally: devops-api runs as a pod in this
+  # same cluster, and routing its own calls back out through the public
+  # hostname bounced them through the Cloudflare Tunnel into Cloudflare
+  # Access's interactive email-verify page — Access is enforced at
+  # Cloudflare's edge before the tunnel ever reaches this cluster's ingress,
+  # so there's no ingress-side header (e.g. a CF-Access-Client-Id/Secret
+  # service token) that can satisfy it after the fact.
+  #
+  # Why they're back on the public hostname now: the cluster's own CoreDNS
+  # (kube-system/coredns ConfigMap, applied directly via kubectl — not
+  # tracked in any GitOps repo, since CoreDNS isn't managed by
+  # clusters-provision/clusters-definition, it's minikube's own addon) now
+  # carries `rewrite` rules that resolve every one of these
+  # *.devopstashtiot.page hostnames straight to ingress-nginx-controller's
+  # in-cluster Service IP for any caller running inside the cluster —
+  # bypassing the Cloudflare Tunnel and Access entirely for in-cluster
+  # traffic, while external/public resolution via real Cloudflare DNS is
+  # untouched. Routing through ingress-nginx-controller (rather than
+  # straight to each tool's own backend Service) matters because that's
+  # where the cluster's real Cloudflare Origin Certificate for
+  # *.devopstashtiot.page is actually mounted (clusters-provision/clusters/
+  # ingress-nginx/templates/origin-cert-secret.yaml) — going straight to a
+  # backend Service (e.g. bitbucket.bitbucket.svc.cluster.local) would hit
+  # no TLS listener at all, since every devtool's own Service is plain HTTP
+  # only (TLS terminates at Cloudflare/ingress-nginx, never on the backend
+  # itself). Going through ingress-nginx-controller instead means normal
+  # host-based Ingress routing reaches the right backend AND on the right
+  # port, so no per-tool port override is needed here even for sonarqube
+  # (9000)/artifactory (8082) — this is real https:// end-to-end, not a
+  # protocol downgrade. The Origin Cert is signed by Cloudflare's own
+  # private Origin CA, which isn't in any standard trust store — devops-api's
+  # Dockerfile installs it explicitly (see that file's own comment) so
+  # httpx's default certificate verification actually passes instead of
+  # needing verify=False.
+  #
+  # This whole rewrite is a workaround, not a permanent fix: AWS Control
+  # Tower now permits creating a private Route53 hosted zone in this account
+  # (it didn't when the original in-cluster-Service-DNS workaround was
+  # written), which would be the correct long-term replacement for these
+  # CoreDNS rewrites — a real private hosted zone instead of hand-maintained
+  # rewrite rules on the cluster's addon DNS. The root problem these values
+  # keep working around is the same one that blocked Bitbucket's own
+  # git-over-HTTPS earlier: Cloudflare Access's email-OTP wall has no
+  # service-token bypass usable by devops-api's own outbound calls, for any
+  # tool, at any public *.devopstashtiot.page host.
   env:
     # Point at the in-cluster MinIO devtool (clusters-provision/clusters/minio)
     # instead of localhost (local dev) or real AWS S3 — its
@@ -39,24 +70,24 @@ example-fast-api:
     # public-read/write (mc anonymous set public), so devops-api's existing
     # httpx-based fetch/upload code works unchanged, just against
     # minio.minio.svc.cluster.local instead of localhost:9100.
-    ARTIFACTORY_API_URL: "http://artifactory.artifactory.svc.cluster.local:8082"
+    ARTIFACTORY_API_URL: "https://artifactory.devopstashtiot.page"
     ARTIFACTORY_LDAP_SETTING_NAME: "ldap-ad"
     ARTIFACTORY_S3_XRAY_UPDATES_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-devops-team/xray-vulnerability-updates"
 
-    BITBUCKET_API_URL: "http://bitbucket.bitbucket.svc.cluster.local"
+    BITBUCKET_API_URL: "https://bitbucket.devopstashtiot.page"
 
-    CONFLUENCE_API_URL: "http://confluence.confluence.svc.cluster.local"
+    CONFLUENCE_API_URL: "https://confluence.devopstashtiot.page"
     CONFLUENCE_S3_PLUGINS_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-clients/confluence-plugins"
     CONFLUENCE_S3_IMPORTS_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-clients/confluence-space-imports"
 
-    JIRA_API_URL: "http://jira.jira.svc.cluster.local"
+    JIRA_API_URL: "https://jira.devopstashtiot.page"
 
-    SONARQUBE_API_URL: "http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000"
+    SONARQUBE_API_URL: "https://sonarqube.devopstashtiot.page"
 
     ARGOCD_ALLOWED_ENVS: '["prod","dr","int"]'
-    ARGOCD_CLUSTER_SECRET_REPO_URL: "http://bitbucket.bitbucket.svc.cluster.local/scm/argo/argocd.git"
+    ARGOCD_CLUSTER_SECRET_REPO_URL: "https://bitbucket.devopstashtiot.page/scm/argo/argocd.git"
 
-    GIT_API_URL: "http://bitbucket.bitbucket.svc.cluster.local/rest/api/1.0"
+    GIT_API_URL: "https://bitbucket.devopstashtiot.page/rest/api/1.0"
     GIT_PROJECT_KEY: "ARGO"
     GIT_SSH_KEY_PATH: "/root/.ssh/id_ed25519"
     GIT_SSH_PORT: "7999"
