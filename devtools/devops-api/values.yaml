@@ -162,3 +162,25 @@ example-fast-api:
       - secretKey: SONARQUBE_PASSWORD
         remoteRef:
           key: /devtools/admin/password
+      # Mounted as a file below (extraSecretMounts), not consumed as an env var — GIT_SSH_KEY_PATH
+      # points at it. It does also land in the devops-api-secrets Secret's other keys via
+      # envFrom (same Secret, no way to exclude one key from that without a second ExternalSecret)
+      # — a minor exposure accepted here rather than adding a whole separate Secret/ExternalSecret
+      # just to avoid it, consistent with this lab platform's existing secret-handling posture.
+      - secretKey: GIT_SSH_PRIVATE_KEY
+        remoteRef:
+          key: /devtools/bitbucket/git-ssh-private-key
+
+  # File-mounted SSH private key for the Git connector's delete_file path (git clone over SSH —
+  # the only op that doesn't use the Bearer-token HTTP path add_file/modify_file use). Needed a
+  # chart fix first (devtools-provision's deployment.yaml gated extraSecretMounts behind
+  # "not vault.enabled", which devops-api always has enabled) — see that repo's git history.
+  # Public half registered against Bitbucket's "admin" account (POST /rest/ssh/1.0/keys, matches
+  # the "admin" REST credentials this deployment already uses — see BITBUCKET_USERNAME above).
+  extraSecretMounts:
+    - name: git-ssh-key
+      secretName: devops-api-secrets
+      defaultMode: 0400
+      mountPath: /root/.ssh/id_ed25519
+      subPath: GIT_SSH_PRIVATE_KEY
+      readOnly: true
