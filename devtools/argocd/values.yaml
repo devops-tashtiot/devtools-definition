@@ -48,8 +48,23 @@ argo-cd:
       # set-ldap-credentials-job.yaml's group-ldap-mapper) rather than
       # individual users, so AD group membership is the single source of
       # truth for who administers ArgoCD.
+      #
+      # The devops-api-argocd-svc role/group below is devops-api's own outbound service
+      # identity (clusters-provision/clusters/rhbk's argocdServiceClient — a dedicated
+      # client_credentials client, not a real AD login) for its cluster-secret routes
+      # (app/v1/argocd/operations.py's create_cluster_secret/edit_cluster_secret/
+      # delete_cluster_secret, all of which operate on Applications in the "default" ArgoCD
+      # project only — see ARGOCD_CLUSTER_SECRET_CHART_PATH/that hardcoded "project": "default"
+      # in operations.py). Deliberately scoped to just the actions that module calls, not
+      # role:admin — a service account should get the least privilege its code actually needs.
       "policy.csv": |
         g, devops-tashtiot, role:admin
+        p, role:devops-api-argocd-svc, applications, get, default/*, allow
+        p, role:devops-api-argocd-svc, applications, create, default/*, allow
+        p, role:devops-api-argocd-svc, applications, update, default/*, allow
+        p, role:devops-api-argocd-svc, applications, delete, default/*, allow
+        p, role:devops-api-argocd-svc, applications, sync, default/*, allow
+        g, devops-api-argocd-svc, role:devops-api-argocd-svc
     repositories:
       devtools-provision:
         url: https://github.com/devops-tashtiot/devtools-provision

@@ -170,6 +170,14 @@ example-fast-api:
       - secretKey: GIT_SSH_PRIVATE_KEY
         remoteRef:
           key: /devtools/bitbucket/git-ssh-private-key
+      # devops-api's own outbound-SSO identity for calling ArgoCD's API (see
+      # app/v1/argocd/conf.py's ARGOCD_SSO_* fields and clusters-provision/clusters/rhbk's
+      # argocdServiceClient) — the same shared RHBK OIDC client secret every other client in
+      # that realm uses (clusters-provision/clusters/rhbk/values.yaml's
+      # sharedClientSecretSsmParameter), not a distinct secret to manage.
+      - secretKey: ARGOCD_SSO_CLIENT_SECRET
+        remoteRef:
+          key: /devtools/rhbk/oidc-client-secret
 
   # File-mounted SSH private key for the Git connector's delete_file path (git clone over SSH —
   # the only op that doesn't use the Bearer-token HTTP path add_file/modify_file use). Needed a
