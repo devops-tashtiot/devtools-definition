@@ -75,14 +75,28 @@ example-fast-api:
     ARTIFACTORY_S3_XRAY_UPDATES_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-devops-team/xray-vulnerability-updates"
 
     BITBUCKET_API_URL: "https://bitbucket.devopstashtiot.page"
+    # Every *_USERNAME below is "admin", not the svc-lcl-*-api code defaults in global_conf.py —
+    # confirmed live (2026-07-14) that those defaults are placeholders with no matching account
+    # on any real devtool instance (401 on every direct REST call using them); "admin" +
+    # /devtools/admin/password (the shared initial admin password documented in the top-level
+    # devops-tashtiot CLAUDE.md, see the vault: block below) is what actually works against
+    # bitbucket/jira/confluence/sonarqube. This was a pre-existing bug, unrelated to the
+    # tashtiot-apis-library bump or inbound-auth work also done this session — devops-api's
+    # direct project/space/group-creation routes for these four tools were silently broken in
+    # this live deployment before this fix (the Git-token-based ArgoCD GitOps flow uses a
+    # different auth mechanism entirely and was unaffected).
+    BITBUCKET_USERNAME: "admin"
 
     CONFLUENCE_API_URL: "https://confluence.devopstashtiot.page"
     CONFLUENCE_S3_PLUGINS_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-clients/confluence-plugins"
     CONFLUENCE_S3_IMPORTS_BASE_URL: "http://minio.minio.svc.cluster.local:9000/platform-clients/confluence-space-imports"
+    CONFLUENCE_USERNAME: "admin"
 
     JIRA_API_URL: "https://jira.devopstashtiot.page"
+    JIRA_USERNAME: "admin"
 
     SONARQUBE_API_URL: "https://sonarqube.devopstashtiot.page"
+    SONARQUBE_USERNAME: "admin"
 
     ARGOCD_ALLOWED_ENVS: '["prod","dr","int"]'
     ARGOCD_CLUSTER_SECRET_REPO_URL: "https://bitbucket.devopstashtiot.page/scm/argo/argocd.git"
@@ -123,6 +137,12 @@ example-fast-api:
   # `Authorization: Bearer ` (empty), which httpx rejects as an illegal header value.
   # Sourced from SSM now instead, matching the platform's SSM SecureString + ExternalSecret
   # convention (see devtools-provision/CLAUDE.md).
+  #
+  # BITBUCKET_PASSWORD/JIRA_PASSWORD/CONFLUENCE_PASSWORD/SONARQUBE_PASSWORD all pull the same
+  # shared admin password every devtool on this platform uses (devtools-labs' terraform/modules/
+  # devtools-secrets publishes it) — paired with USERNAME: "admin" above, not a distinct
+  # per-tool secret, matching how this one password already gates every devtool's own admin
+  # login platform-wide.
   vault:
     enabled: true
     clusterSecretStore: aws-parameter-store
@@ -130,3 +150,15 @@ example-fast-api:
       - secretKey: GIT_TOKEN
         remoteRef:
           key: /devtools/bitbucket/api-token
+      - secretKey: BITBUCKET_PASSWORD
+        remoteRef:
+          key: /devtools/admin/password
+      - secretKey: JIRA_PASSWORD
+        remoteRef:
+          key: /devtools/admin/password
+      - secretKey: CONFLUENCE_PASSWORD
+        remoteRef:
+          key: /devtools/admin/password
+      - secretKey: SONARQUBE_PASSWORD
+        remoteRef:
+          key: /devtools/admin/password
