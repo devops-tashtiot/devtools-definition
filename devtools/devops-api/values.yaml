@@ -93,6 +93,21 @@ example-fast-api:
 
     DOMAIN_SUFFIX: "devopstashtiot.page"
 
+    # Inbound auth (tashtiot-apis-library >= v1.0.0, general_create_app(enable_auth=True) in
+    # app/main.py) — verifies every route's Bearer token via OIDC against this platform's own
+    # Keycloak (rhbk), rather than a shared secret or a locally-generated keypair. No secret
+    # value needed here (see the vault: block below for why) — OIDC/JWKS verification only
+    # needs the issuer URL and the expected audience, both public. AUTH_OIDC_ISSUER points at
+    # the "devtools" realm; AUTH_AUDIENCE must match the "devops-api-audience" client scope's
+    # audience mapper in clusters-provision/clusters/rhbk (clientId "devops-api" there is the
+    # audience target, not a login client — see that repo's values.yaml comment). Every
+    # caller now needs a real Bearer token — no caller of devops-api was found documented
+    # anywhere in this platform when this was enabled (see devops-api/CLAUDE.md's "Inbound
+    # auth" section for the full picture and how to generate a test token).
+    AUTH_ENABLED: "true"
+    AUTH_OIDC_ISSUER: "https://rhbk.devopstashtiot.page/realms/devtools"
+    AUTH_AUDIENCE: "devops-api"
+
   # GIT_TOKEN was previously a plaintext empty string here ("set out-of-band, not
   # committed to git") — the Git connector's Bearer-auth path sent it verbatim as
   # `Authorization: Bearer ` (empty), which httpx rejects as an illegal header value.
