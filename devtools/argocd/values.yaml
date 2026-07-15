@@ -95,6 +95,41 @@ argo-cd:
       limits:
         cpu: 200m
         memory: 256Mi
+    # Merges the Cloudflare Origin CA (wrapper.originCaCrtSsmParameter below,
+    # synced by devtools-provision/devtools/argocd/templates/origin-ca-secret.yaml)
+    # into a writable copy of this pod's own CA bundle at startup, then mounts
+    # that copy over /etc/ssl/certs for the main container — see that
+    # template's header comment for why this trust is needed at all. A
+    # runtime merge (rather than committing a static combined bundle) so it
+    # always starts from whatever CA bundle the running argocd image actually
+    # ships — an image bump never goes stale here. Pinned to alpine:3 rather
+    # than the argocd image itself only because alpine ships a complete,
+    # ready-to-use ca-certificates bundle out of the box; its version doesn't
+    # need to track Chart.yaml's appVersion.
+    initContainers:
+      - name: merge-origin-ca
+        image: alpine:3
+        command:
+          - sh
+          - -c
+          - |
+            apk add --no-cache ca-certificates >/dev/null
+            cp -r /etc/ssl/certs/. /out/
+            cat /origin-ca/ca.crt >> /out/ca-certificates.crt
+        volumeMounts:
+          - name: merged-ca-certs
+            mountPath: /out
+          - name: origin-ca
+            mountPath: /origin-ca
+    volumes:
+      - name: merged-ca-certs
+        emptyDir: {}
+      - name: origin-ca
+        secret:
+          secretName: argocd-origin-ca
+    volumeMounts:
+      - name: merged-ca-certs
+        mountPath: /etc/ssl/certs
     # kube-prometheus-stack is deployed and its monitoring.coreos.com CRDs
     # exist on this cluster now — safe to enable the ServiceMonitor Prometheus
     # Operator picks up automatically. Its Prometheus CR's serviceMonitorSelector
@@ -158,6 +193,12 @@ wrapper:
   # on the RHBK side via the Admin API — one source of truth, no manual sync
   # needed.
   oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
+
+  # Same SSM parameter ingress-nginx's own ExternalSecret already reads for
+  # its default TLS cert (clusters-definition/clusters/ingress-nginx/values.yaml)
+  # — see devtools-provision/devtools/argocd/values.yaml's comment on this key
+  # and templates/origin-ca-secret.yaml for why argocd-server needs to trust it.
+  originCaCrtSsmParameter: "/devtools/cloudflare/origin-cert-crt"
 
   # kube-prometheus-stack is deployed with grafana.sidecar.dashboards.enabled
   # + searchNamespace: ALL (see clusters-definition/clusters/kube-prometheus-stack)
