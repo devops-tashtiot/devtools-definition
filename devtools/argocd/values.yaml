@@ -31,6 +31,23 @@ argo-cd:
       # for the realm + client this issuer/clientID point at. clientSecret
       # is substituted from argocd-secret's oidc.keycloak.clientSecret key,
       # merged in via devtools-provision/devtools/argocd/templates/oidc-secret.yaml.
+      #
+      # rootCA: outbound calls argocd-server itself makes to rhbk.devopstashtiot.page
+      # (OIDC discovery + token verification, for both browser login here and
+      # devops-api's client_credentials service account — see
+      # app/v1/argocd/CLAUDE.md in devops-api) resolve in-cluster to
+      # ingress-nginx, which presents the real Cloudflare Origin Certificate —
+      # not a publicly-trusted CA. Without this, every OIDC token gets
+      # rejected with "x509: certificate signed by unknown authority",
+      # regardless of who it was issued to. This is ArgoCD's own built-in
+      # field for a self-signed/internal-CA IdP (see the vendored chart's
+      # commented example at charts/argo-cd/values.yaml's oidc.config
+      # section) — no volume mount or initContainer needed, since it's a
+      # public certificate, safe to inline as plain text here. Same PEM
+      # ingress-nginx's own TLS cert uses (clusters-provision/clusters/
+      # ingress-nginx/templates/origin-cert-secret.yaml, sourced from SSM
+      # /devtools/cloudflare/origin-cert-crt) — re-paste from there if it's
+      # ever rotated.
       "oidc.config": |
         name: RHBK
         issuer: https://rhbk.devopstashtiot.page/realms/devtools
@@ -41,6 +58,35 @@ argo-cd:
           - profile
           - email
           - groups
+        rootCA: |
+          -----BEGIN CERTIFICATE-----
+          MIIEsjCCA5qgAwIBAgIUEtR0JDa8YmE1A105oCc0XgLBL/gwDQYJKoZIhvcNAQEL
+          BQAwgYsxCzAJBgNVBAYTAlVTMRkwFwYDVQQKExBDbG91ZEZsYXJlLCBJbmMuMTQw
+          MgYDVQQLEytDbG91ZEZsYXJlIE9yaWdpbiBTU0wgQ2VydGlmaWNhdGUgQXV0aG9y
+          aXR5MRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRMwEQYDVQQIEwpDYWxpZm9ybmlh
+          MB4XDTI2MDcxMzIzMzUwMFoXDTQxMDcwOTIzMzUwMFowYjEZMBcGA1UEChMQQ2xv
+          dWRGbGFyZSwgSW5jLjEdMBsGA1UECxMUQ2xvdWRGbGFyZSBPcmlnaW4gQ0ExJjAk
+          BgNVBAMTHUNsb3VkRmxhcmUgT3JpZ2luIENlcnRpZmljYXRlMIIBIjANBgkqhkiG
+          9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw8P+LiyK5GS9v21xr8dnCVpF0VNYBfWP3eM2
+          D2KQAj3yrQVB/6HUgWNK4u0Da7VevWoMseAY3snM3GY5DCBpmAAAXkz/LdOmJevt
+          b7Zxi2xk8Xdp5i2EdHC4gDV5mM8G5ateMtdZiw/+VVXOJtwI8F6wFGEZ9znVck3P
+          ALDHN65ObVOlMhTIENhaxRd4vDCP0kgZGlVQzB8G4V9cfEohB0HQ1T1wV4zKuZEH
+          GeXCi2c+Yey9/b4mzHtkhzCvQwKLSnGxhMXtufUeAWfE/SLbTxnfhBt4z7H8ZW0o
+          GBRokliFS2dAi7N2F9K45C6gHdmRfh0ky/pAP6psIC8nWuUoPwIDAQABo4IBNDCC
+          ATAwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
+          ATAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBSVH1ihjGJCaNRdGSJDIhX8OUZe6DAf
+          BgNVHSMEGDAWgBQk6FNXXXw0QIep65TbuuEWePwppDBABggrBgEFBQcBAQQ0MDIw
+          MAYIKwYBBQUHMAGGJGh0dHA6Ly9vY3NwLmNsb3VkZmxhcmUuY29tL29yaWdpbl9j
+          YTA1BgNVHREELjAsghUqLmRldm9wc3Rhc2h0aW90LnBhZ2WCE2Rldm9wc3Rhc2h0
+          aW90LnBhZ2UwOAYDVR0fBDEwLzAtoCugKYYnaHR0cDovL2NybC5jbG91ZGZsYXJl
+          LmNvbS9vcmlnaW5fY2EuY3JsMA0GCSqGSIb3DQEBCwUAA4IBAQABOMP1/GSmDr92
+          FASRuh6pphemz2y2G6iBTdN13E9OKGYoZwc52EigScHucFdm6g5m6vQ8EjOi4ZzF
+          Ib6rQhp3tjdwuRPOOYqYxC5+RofL6e8u6ZJGUa6WGXWt16McHVxtOrMMLfOFYQ2a
+          9xfabX1wvQ43L3n8NRN5o++tBn8cNmsJIjiebpmxjNXvnsDauso2p73yJiYKVz6z
+          Asvk9ko+tt/KsV6hrg+YVrRdklK5W1afb/P2uyZ+UYHQvDZwDjeTybI4LvjecHBG
+          btEk3zJSUI02Vfg9E5l61ehoJZNNIEhD+kuUeXqM1NKzt3xuVLqQEyKz+wk9tHol
+          XnlahjtZ
+          -----END CERTIFICATE-----
     rbac:
       # Grants admin to anyone in the devops-tashtiot AD group (surfaced as a
       # "groups" claim by RHBK's optional "groups" client scope — see
@@ -95,41 +141,6 @@ argo-cd:
       limits:
         cpu: 200m
         memory: 256Mi
-    # Merges the Cloudflare Origin CA (wrapper.originCaCrtSsmParameter below,
-    # synced by devtools-provision/devtools/argocd/templates/origin-ca-secret.yaml)
-    # into a writable copy of this pod's own CA bundle at startup, then mounts
-    # that copy over /etc/ssl/certs for the main container — see that
-    # template's header comment for why this trust is needed at all. A
-    # runtime merge (rather than committing a static combined bundle) so it
-    # always starts from whatever CA bundle the running argocd image actually
-    # ships — an image bump never goes stale here. Pinned to alpine:3 rather
-    # than the argocd image itself only because alpine ships a complete,
-    # ready-to-use ca-certificates bundle out of the box; its version doesn't
-    # need to track Chart.yaml's appVersion.
-    initContainers:
-      - name: merge-origin-ca
-        image: alpine:3
-        command:
-          - sh
-          - -c
-          - |
-            apk add --no-cache ca-certificates >/dev/null
-            cp -r /etc/ssl/certs/. /out/
-            cat /origin-ca/ca.crt >> /out/ca-certificates.crt
-        volumeMounts:
-          - name: merged-ca-certs
-            mountPath: /out
-          - name: origin-ca
-            mountPath: /origin-ca
-    volumes:
-      - name: merged-ca-certs
-        emptyDir: {}
-      - name: origin-ca
-        secret:
-          secretName: argocd-origin-ca
-    volumeMounts:
-      - name: merged-ca-certs
-        mountPath: /etc/ssl/certs
     # kube-prometheus-stack is deployed and its monitoring.coreos.com CRDs
     # exist on this cluster now — safe to enable the ServiceMonitor Prometheus
     # Operator picks up automatically. Its Prometheus CR's serviceMonitorSelector
@@ -193,12 +204,6 @@ wrapper:
   # on the RHBK side via the Admin API — one source of truth, no manual sync
   # needed.
   oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
-
-  # Same SSM parameter ingress-nginx's own ExternalSecret already reads for
-  # its default TLS cert (clusters-definition/clusters/ingress-nginx/values.yaml)
-  # — see devtools-provision/devtools/argocd/values.yaml's comment on this key
-  # and templates/origin-ca-secret.yaml for why argocd-server needs to trust it.
-  originCaCrtSsmParameter: "/devtools/cloudflare/origin-cert-crt"
 
   # kube-prometheus-stack is deployed with grafana.sidecar.dashboards.enabled
   # + searchNamespace: ALL (see clusters-definition/clusters/kube-prometheus-stack)
