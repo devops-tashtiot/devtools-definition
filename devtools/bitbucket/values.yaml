@@ -82,9 +82,9 @@ bitbucket:
   volumes:
     localHome:
       persistentVolumeClaim:
-        storageClassName: standard
+        storageClassName: gp3
     sharedHome:
-      storageClassName: standard
+      storageClassName: gp3
 
 wrapper:
   bitbucketSecrets:

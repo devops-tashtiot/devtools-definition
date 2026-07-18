@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/devops-tashtiot/devtools-definition
-    targetRevision: main
+    targetRevision: eks-migration
     path: .
     directory:
       include: applicationset.yaml

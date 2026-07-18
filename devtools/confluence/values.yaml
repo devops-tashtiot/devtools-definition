@@ -124,13 +124,13 @@ confluence:
   volumes:
     localHome:
       persistentVolumeClaim:
-        storageClassName: standard
+        storageClassName: gp3
     sharedHome:
       persistentVolumeClaim:
-        storageClassName: standard
+        storageClassName: gp3
     synchronyHome:
       persistentVolumeClaim:
-        storageClassName: standard
+        storageClassName: gp3
 
 wrapper:
   confluenceSecrets:

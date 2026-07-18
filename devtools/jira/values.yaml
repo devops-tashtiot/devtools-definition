@@ -98,10 +98,16 @@ jira:
   volumes:
     localHome:
       persistentVolumeClaim:
-        storageClassName: standard
+        storageClassName: gp3
     sharedHome:
       persistentVolumeClaim:
-        storageClassName: standard
+        storageClassName: gp3
+        # EBS only supports ReadWriteOnce — the vendored chart's
+        # shared-home-pvc.yaml template hardcoded ReadWriteMany with no
+        # override field until devtools-provision's eks-migration patch
+        # added this one. Safe because Jira DC clustering is disabled here
+        # (replicaCount: 1) — RWX was never semantically needed.
+        accessModes: ["ReadWriteOnce"]
 
 wrapper:
   rdsAdmin:

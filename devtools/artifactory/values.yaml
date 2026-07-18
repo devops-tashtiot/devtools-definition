@@ -16,11 +16,18 @@
 # below) won't establish — see devtools-definition/devtools/xray/values.yaml.
 
 artifactory:
+  # No IAM annotation needed anywhere (Pod Identity, not IRSA) — the
+  # aws_eks_pod_identity_association (devtools-labs eks module) already maps
+  # namespace=artifactory + the ServiceAccount name pinned in
+  # devtools-provision (serviceAccount.create/name) to the scoped S3 role.
+  # useInstanceCredentials: false because there's no node IMDS role to fall
+  # back to on EKS the way minikube's node role provided implicitly.
   artifactory:
     persistence:
-      storageClassName: standard
+      storageClassName: gp3
       type: s3-storage-v3-direct
       awsS3V3:
+        useInstanceCredentials: false
         bucketName: "devtools-artifactory-binaries-342831714456"
         region: "il-central-1"
 

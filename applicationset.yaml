@@ -7,7 +7,7 @@ spec:
   generators:
     - git:
         repoURL: https://github.com/devops-tashtiot/devtools-provision
-        revision: main
+        revision: eks-migration
         directories:
           - path: devtools/*
   template:
@@ -18,14 +18,14 @@ spec:
       project: default
       sources:
         - repoURL: https://github.com/devops-tashtiot/devtools-provision
-          targetRevision: main
+          targetRevision: eks-migration
           path: '{{path}}'
           helm:
             valueFiles:
               - values.yaml
               - $definition/devtools/{{path.basename}}/values.yaml
         - repoURL: https://github.com/devops-tashtiot/devtools-definition
-          targetRevision: main
+          targetRevision: eks-migration
           ref: definition
       destination:
         server: https://kubernetes.default.svc
