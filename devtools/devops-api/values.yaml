@@ -104,6 +104,7 @@ example-fast-api:
     GIT_API_URL: "https://bitbucket.devopstashtiot.page/rest/api/1.0"
     GIT_PROJECT_KEY: "ARGO"
     GIT_SSH_KEY_PATH: "/root/.ssh/id_ed25519"
+    GIT_SSH_PORT: "7999"
 
     DOMAIN_SUFFIX: "devopstashtiot.page"
 
