@@ -113,3 +113,7 @@ wrapper:
   rdsAdmin:
     usernameSsmParameter: "/devtools/rds/admin-username"
     passwordSsmParameter: "/devtools/rds/admin-password"
+
+  # Cloudflare's public Origin CA root cert, published once for every devtool
+  # by devtools-labs Terraform's devtools-secrets module.
+  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
