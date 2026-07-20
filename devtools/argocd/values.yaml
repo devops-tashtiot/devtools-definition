@@ -195,7 +195,13 @@ argo-cd:
 wrapper:
   ingress:
     enabled: true
-    host: argocd.devopstashtiot.page
+    # *.argocd.devopstashtiot.page added 2026-07-21 — routes the per-consumer ArgoCD wildcard
+    # (app/v1/argocd/CLAUDE.md in devops-api, _build_argocd()) through ingress-nginx with real
+    # TLS (now covered by the Origin Cert's added SAN — see devtools-labs/terraform/live/
+    # devtools/cloudflare) instead of connecting directly to argocd-server's plain-HTTP Service.
+    hosts:
+      - argocd.devopstashtiot.page
+      - "*.argocd.devopstashtiot.page"
 
   # Same SSM value bitbucket/jira/confluence/artifactory's trusted-certs.yaml already use —
   # see devtools-provision/devtools/argocd/templates/trusted-certs.yaml for how this feeds
