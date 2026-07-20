@@ -104,6 +104,13 @@ example-fast-api:
     GIT_API_URL: "https://bitbucket.devopstashtiot.page/rest/api/1.0"
     GIT_PROJECT_KEY: "ARGO"
     GIT_SSH_KEY_PATH: "/root/.ssh/id_ed25519"
+    # Matches the "7995" key in clusters-provision/clusters/ingress-nginx/values.yaml's TCP
+    # passthrough (bitbucket/bitbucket:7999 behind it) — not Bitbucket's real SSH port, but
+    # this is the only port actually reachable through that passthrough from in-cluster
+    # callers. The library's ssh_port param (apis-library#12, v1.2.1+) would default to the
+    # real 7999 if this were left unset, which doesn't work through the current passthrough.
+    # If the passthrough key is ever changed to 7999, this must change with it.
+    GIT_SSH_PORT: "7995"
 
     DOMAIN_SUFFIX: "devopstashtiot.page"
 
