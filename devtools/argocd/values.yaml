@@ -17,6 +17,12 @@ argo-cd:
   configs:
     params:
       "server.insecure": true
+    # argocd-tls-certs-cm is created and owned by devtools-provision/devtools/argocd/templates/
+    # trusted-certs.yaml (an ExternalSecret using its spec.target.manifest field, sourced from
+    # SSM) instead — disable the chart's own management of it to avoid two controllers fighting
+    # over the same object. See that template's comment for the full "why".
+    tls:
+      create: false
     cm:
       # Required for OIDC to work at all: without it, ArgoCD has to guess its
       # own external base URL to build the redirect_uri it sends to RHBK's
@@ -190,6 +196,11 @@ wrapper:
   ingress:
     enabled: true
     host: argocd.devopstashtiot.page
+
+  # Same SSM value bitbucket/jira/confluence/artifactory's trusted-certs.yaml already use —
+  # see devtools-provision/devtools/argocd/templates/trusted-certs.yaml for how this feeds
+  # argocd-tls-certs-cm (repo-server's git-over-HTTPS trust store) instead of a JVM truststore.
+  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
 
   # Shared admin password across argocd/bitbucket/confluence — see
   # devtools-provision/devtools/argocd/templates/argocd-admin-secret.yaml
