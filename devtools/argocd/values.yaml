@@ -49,11 +49,34 @@ argo-cd:
       # field for a self-signed/internal-CA IdP (see the vendored chart's
       # commented example at charts/argo-cd/values.yaml's oidc.config
       # section) — no volume mount or initContainer needed, since it's a
-      # public certificate, safe to inline as plain text here. Same PEM
+      # public certificate, safe to inline as plain text here.
+      #
+      # 2026-07-21 correction — this MUST be the actual issuing CA certificate
+      # (CloudFlare Origin SSL Certificate Authority, self-signed, CA:TRUE),
+      # NOT the domain's own leaf/origin certificate (CN=CloudFlare Origin
+      # Certificate, CA:FALSE, SAN=*.devopstashtiot.page). An earlier version
+      # of this field had the leaf cert pasted in instead — same PEM
       # ingress-nginx's own TLS cert uses (clusters-provision/clusters/
       # ingress-nginx/templates/origin-cert-secret.yaml, sourced from SSM
-      # /devtools/cloudflare/origin-cert-crt) — re-paste from there if it's
-      # ever rotated.
+      # /devtools/cloudflare/origin-cert-crt) — which looks superficially
+      # right (it's also "the Cloudflare Origin cert") but is a non-CA
+      # end-entity certificate, so Go's x509 verifier can never treat it as a
+      # trust anchor for a *different* leaf (rhbk's), and every OIDC
+      # Bearer-token verification failed with "certificate signed by unknown
+      # authority" as a result — confirmed live via devops-api's
+      # test_create_update_delete_cluster_secret_full_flow (see
+      # app/v1/argocd/CLAUDE.md's 2026-07-21 entry), even with a freshly
+      # restarted argocd-server reading this exact ConfigMap. The value below
+      # instead is Cloudflare's own published, static Origin CA root
+      # (public, same for every Cloudflare customer, not domain-specific —
+      # source: https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/,
+      # same file devops-api's own Dockerfile installs as
+      # cloudflare-origin-ca-rsa-root.pem for the identical reason). Verified
+      # with `openssl verify -CAfile <this-cert> <the-old-leaf-cert>` → OK,
+      # i.e. this is genuinely the certificate that signs the leaf ArgoCD
+      # actually receives on the wire. If this is ever rotated, re-fetch from
+      # Cloudflare's own docs above — do NOT re-paste from
+      # origin-cert-secret.yaml, that's a different (leaf) certificate.
       "oidc.config": |
         name: RHBK
         issuer: https://rhbk.devopstashtiot.page/realms/devtools
@@ -66,32 +89,28 @@ argo-cd:
           - groups
         rootCA: |
           -----BEGIN CERTIFICATE-----
-          MIIEsjCCA5qgAwIBAgIUEtR0JDa8YmE1A105oCc0XgLBL/gwDQYJKoZIhvcNAQEL
-          BQAwgYsxCzAJBgNVBAYTAlVTMRkwFwYDVQQKExBDbG91ZEZsYXJlLCBJbmMuMTQw
-          MgYDVQQLEytDbG91ZEZsYXJlIE9yaWdpbiBTU0wgQ2VydGlmaWNhdGUgQXV0aG9y
-          aXR5MRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRMwEQYDVQQIEwpDYWxpZm9ybmlh
-          MB4XDTI2MDcxMzIzMzUwMFoXDTQxMDcwOTIzMzUwMFowYjEZMBcGA1UEChMQQ2xv
-          dWRGbGFyZSwgSW5jLjEdMBsGA1UECxMUQ2xvdWRGbGFyZSBPcmlnaW4gQ0ExJjAk
-          BgNVBAMTHUNsb3VkRmxhcmUgT3JpZ2luIENlcnRpZmljYXRlMIIBIjANBgkqhkiG
-          9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw8P+LiyK5GS9v21xr8dnCVpF0VNYBfWP3eM2
-          D2KQAj3yrQVB/6HUgWNK4u0Da7VevWoMseAY3snM3GY5DCBpmAAAXkz/LdOmJevt
-          b7Zxi2xk8Xdp5i2EdHC4gDV5mM8G5ateMtdZiw/+VVXOJtwI8F6wFGEZ9znVck3P
-          ALDHN65ObVOlMhTIENhaxRd4vDCP0kgZGlVQzB8G4V9cfEohB0HQ1T1wV4zKuZEH
-          GeXCi2c+Yey9/b4mzHtkhzCvQwKLSnGxhMXtufUeAWfE/SLbTxnfhBt4z7H8ZW0o
-          GBRokliFS2dAi7N2F9K45C6gHdmRfh0ky/pAP6psIC8nWuUoPwIDAQABo4IBNDCC
-          ATAwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
-          ATAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBSVH1ihjGJCaNRdGSJDIhX8OUZe6DAf
-          BgNVHSMEGDAWgBQk6FNXXXw0QIep65TbuuEWePwppDBABggrBgEFBQcBAQQ0MDIw
-          MAYIKwYBBQUHMAGGJGh0dHA6Ly9vY3NwLmNsb3VkZmxhcmUuY29tL29yaWdpbl9j
-          YTA1BgNVHREELjAsghUqLmRldm9wc3Rhc2h0aW90LnBhZ2WCE2Rldm9wc3Rhc2h0
-          aW90LnBhZ2UwOAYDVR0fBDEwLzAtoCugKYYnaHR0cDovL2NybC5jbG91ZGZsYXJl
-          LmNvbS9vcmlnaW5fY2EuY3JsMA0GCSqGSIb3DQEBCwUAA4IBAQABOMP1/GSmDr92
-          FASRuh6pphemz2y2G6iBTdN13E9OKGYoZwc52EigScHucFdm6g5m6vQ8EjOi4ZzF
-          Ib6rQhp3tjdwuRPOOYqYxC5+RofL6e8u6ZJGUa6WGXWt16McHVxtOrMMLfOFYQ2a
-          9xfabX1wvQ43L3n8NRN5o++tBn8cNmsJIjiebpmxjNXvnsDauso2p73yJiYKVz6z
-          Asvk9ko+tt/KsV6hrg+YVrRdklK5W1afb/P2uyZ+UYHQvDZwDjeTybI4LvjecHBG
-          btEk3zJSUI02Vfg9E5l61ehoJZNNIEhD+kuUeXqM1NKzt3xuVLqQEyKz+wk9tHol
-          XnlahjtZ
+          MIIEADCCAuigAwIBAgIID+rOSdTGfGcwDQYJKoZIhvcNAQELBQAwgYsxCzAJBgNV
+          BAYTAlVTMRkwFwYDVQQKExBDbG91ZEZsYXJlLCBJbmMuMTQwMgYDVQQLEytDbG91
+          ZEZsYXJlIE9yaWdpbiBTU0wgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MRYwFAYDVQQH
+          Ew1TYW4gRnJhbmNpc2NvMRMwEQYDVQQIEwpDYWxpZm9ybmlhMB4XDTE5MDgyMzIx
+          MDgwMFoXDTI5MDgxNTE3MDAwMFowgYsxCzAJBgNVBAYTAlVTMRkwFwYDVQQKExBD
+          bG91ZEZsYXJlLCBJbmMuMTQwMgYDVQQLEytDbG91ZEZsYXJlIE9yaWdpbiBTU0wg
+          Q2VydGlmaWNhdGUgQXV0aG9yaXR5MRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRMw
+          EQYDVQQIEwpDYWxpZm9ybmlhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
+          AQEAwEiVZ/UoQpHmFsHvk5isBxRehukP8DG9JhFev3WZtG76WoTthvLJFRKFCHXm
+          V6Z5/66Z4S09mgsUuFwvJzMnE6Ej6yIsYNCb9r9QORa8BdhrkNn6kdTly3mdnykb
+          OomnwbUfLlExVgNdlP0XoRoeMwbQ4598foiHblO2B/LKuNfJzAMfS7oZe34b+vLB
+          yrP/1bgCSLdc1AxQc1AC0EsQQhgcyTJNgnG4va1c7ogPlwKyhbDyZ4e59N5lbYPJ
+          SmXI/cAe3jXj1FBLJZkwnoDKe0v13xeF+nF32smSH0qB7aJX2tBMW4TWtFPmzs5I
+          lwrFSySWAdwYdgxw180yKU0dvwIDAQABo2YwZDAOBgNVHQ8BAf8EBAMCAQYwEgYD
+          VR0TAQH/BAgwBgEB/wIBAjAdBgNVHQ4EFgQUJOhTV118NECHqeuU27rhFnj8KaQw
+          HwYDVR0jBBgwFoAUJOhTV118NECHqeuU27rhFnj8KaQwDQYJKoZIhvcNAQELBQAD
+          ggEBAHwOf9Ur1l0Ar5vFE6PNrZWrDfQIMyEfdgSKofCdTckbqXNTiXdgbHs+TWoQ
+          wAB0pfJDAHJDXOTCWRyTeXOseeOi5Btj5CnEuw3P0oXqdqevM1/+uWp0CM35zgZ8
+          VD4aITxity0djzE6Qnx3Syzz+ZkoBgTnNum7d9A66/V636x4vTeqbZFBr9erJzgz
+          hhurjcoacvRNhnjtDRM0dPeiCJ50CP3wEYuvUzDHUaowOsnLCjQIkWbR7Ni6KEIk
+          MOz2U0OBSif3FTkhCgZWQKOOLo1P42jHC3ssUZAtVNXrCk3fw9/E15k8NPkBazZ6
+          0iykLhH1trywrKRMVw67F44IE8Y=
           -----END CERTIFICATE-----
     rbac:
       # Grants admin to anyone in the devops-tashtiot AD group (surfaced as a
