@@ -1,6 +1,9 @@
 # EKS-specific overrides for Woodpecker CI.
 # Merged on top of devtools-provision/devtools/woodpecker/values.yaml by ArgoCD.
 # Traffic: Cloudflare → cloudflared → nginx-ingress → woodpecker-server (ClusterIP).
+# Forge: Bitbucket Data Center (already deployed on this platform, see
+# devtools-definition/devtools/bitbucket) — see wrapper.bitbucketDcSecrets
+# below for the one manual step this still requires.
 # Prereq: add DNS CNAME woodpecker.devopstashtiot.page → 7de872ce-2826-42fb-9aea-325e10e3e5fc.cfargotunnel.com
 
 woodpecker:
@@ -30,6 +33,44 @@ woodpecker:
         cpu: 500m
         memory: 512Mi
 
+    # Ensures the "woodpecker" database exists on the shared RDS instance
+    # before the server starts — idempotent, safe to re-run on every pod
+    # start. Same pattern as bitbucket/confluence/jira's additionalInitContainers,
+    # adapted to this chart's own server.initContainers field.
+    initContainers:
+      - name: ensure-postgres-db
+        image: postgres:17-alpine
+        env:
+          - name: PGHOST
+            value: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
+          - name: PGPORT
+            value: "5432"
+          - name: ADMIN_USER
+            valueFrom:
+              secretKeyRef:
+                name: rds-admin-credentials
+                key: username
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: rds-admin-credentials
+                key: password
+          - name: APP_DB_NAME
+            value: "woodpecker"
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -eu
+            # Every devtool connects to Postgres as the shared RDS admin user
+            # (see rds-admin-credentials / woodpecker-db, both sourced from
+            # the same SSM params) — no per-tool role, so nothing to CREATE
+            # ROLE or GRANT here, just make sure the database itself exists.
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
+              "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
+            psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+              "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
+
   agent:
     resources:
       requests:
@@ -38,3 +79,37 @@ woodpecker:
       limits:
         cpu: 1000m
         memory: 1Gi
+
+wrapper:
+  rdsAdmin:
+    usernameSsmParameter: "/devtools/rds/admin-username"
+    passwordSsmParameter: "/devtools/rds/admin-password"
+
+  database:
+    host: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
+
+  # Bitbucket Data Center forge integration. The client id/secret come from
+  # a one-time manual step — Bitbucket has no REST API for Application Link
+  # registration:
+  #   1. In Bitbucket, go to Administration > Application Links > Create link.
+  #   2. Enter https://woodpecker.devopstashtiot.page as the application URL.
+  #      Bitbucket won't be able to auto-detect it (no reciprocal link) —
+  #      choose "I don't want to reciprocate", type "External Application",
+  #      direction "Incoming".
+  #   3. Note the generated OAuth client id/secret, then store them:
+  #        aws ssm put-parameter --name /devtools/woodpecker/bitbucket-client-id     --type SecureString --value "<client-id>"
+  #        aws ssm put-parameter --name /devtools/woodpecker/bitbucket-client-secret --type SecureString --value "<client-secret>"
+  # Until those two SSM parameters exist, the woodpecker-bitbucket-dc-credentials
+  # ExternalSecret will fail to sync and the two keys below stay unset —
+  # Woodpecker will come up but repos won't list until this step is done.
+  bitbucketDcSecrets:
+    url: "https://bitbucket.devopstashtiot.page"
+    clientIdSsmParameter: "/devtools/woodpecker/bitbucket-client-id"
+    clientSecretSsmParameter: "/devtools/woodpecker/bitbucket-client-secret"
+    # Bitbucket Server can't clone over git+https with an OAuth token, so
+    # Woodpecker needs a real account's credentials for git operations —
+    # reusing the shared admin login here rather than provisioning a
+    # dedicated bot account, consistent with every other devtool on this
+    # platform sharing /devtools/admin/password.
+    gitUsername: "admin"
+    gitPasswordSsmParameter: "/devtools/admin/password"
