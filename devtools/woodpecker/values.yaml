@@ -33,11 +33,34 @@ woodpecker:
         cpu: 500m
         memory: 512Mi
 
+    # Trusts the Cloudflare Origin CA root cert (see wrapper.trustedCertsSsmParameter
+    # / devtools-provision's templates/trusted-certs.yaml) so outbound calls to
+    # bitbucket.devopstashtiot.page — OAuth2 token exchange, forge API — pass real
+    # TLS verification instead of "x509: certificate signed by unknown authority".
+    # Woodpecker's server image is FROM scratch with no shell/update-ca-certificates,
+    # so the only way in is to build a combined bundle in an init container (which
+    # does have a shell) and mount it whole over the main container's
+    # /etc/ssl/certs/ca-certificates.crt. curlimages/curl already ships its own
+    # /etc/ssl/certs/ca-certificates.crt (standard public CAs), so this appends our
+    # one extra root onto that rather than needing a separate ca-certificates
+    # install step.
+    #
     # Ensures the "woodpecker" database exists on the shared RDS instance
     # before the server starts — idempotent, safe to re-run on every pod
     # start. Same pattern as bitbucket/confluence/jira's additionalInitContainers,
     # adapted to this chart's own server.initContainers field.
     initContainers:
+      - name: trust-cloudflare-origin-ca
+        image: curlimages/curl:8.11.0
+        command:
+          - sh
+          - -c
+          - cat /etc/ssl/certs/ca-certificates.crt /cloudflare-origin-ca/origin-ca-root.pem > /ca-bundle/ca-certificates.crt
+        volumeMounts:
+          - name: cloudflare-origin-ca-root
+            mountPath: /cloudflare-origin-ca
+          - name: ca-bundle
+            mountPath: /ca-bundle
       - name: ensure-postgres-db
         image: postgres:17-alpine
         env:
@@ -71,6 +94,23 @@ woodpecker:
             psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
               "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
 
+    # ca-bundle: written by the trust-cloudflare-origin-ca initContainer above,
+    # mounted over the main container's own CA file below (subPath, so only that
+    # one file is replaced — not the whole /etc/ssl/certs directory).
+    # cloudflare-origin-ca-root: the raw cert synced by devtools-provision's
+    # templates/trusted-certs.yaml ExternalSecret; only the init container reads it.
+    extraVolumes:
+      - name: ca-bundle
+        emptyDir: {}
+      - name: cloudflare-origin-ca-root
+        secret:
+          secretName: woodpecker-cloudflare-origin-ca-root
+
+    extraVolumeMounts:
+      - name: ca-bundle
+        mountPath: /etc/ssl/certs/ca-certificates.crt
+        subPath: ca-certificates.crt
+
   agent:
     resources:
       requests:
@@ -87,6 +127,10 @@ wrapper:
 
   database:
     host: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
+
+  # Same SSM value argocd/bitbucket/jira/confluence/artifactory already use —
+  # see devtools-provision's values.yaml/templates/trusted-certs.yaml.
+  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
 
   # Bitbucket Data Center forge integration. The client id/secret come from
   # a one-time manual step — Bitbucket has no REST API for Application Link
