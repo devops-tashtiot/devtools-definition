@@ -88,3 +88,18 @@ wrapper:
     usernameSsmParameter: "/devtools/rds/admin-username"
     passwordSsmParameter: "/devtools/rds/admin-password"
   adminPasswordSsmParameter: "/devtools/admin/password"
+  # SSO against the shared RHBK instance (clusters-provision/clusters/rhbk's
+  # harborClient) — see templates/configure-oidc-job.yaml for how this gets applied
+  # via Harbor's own REST API. oidc_verify_cert is hardcoded false in that Job (not a
+  # values field) — see the Job's header comment for why Harbor's API leaves no
+  # better option than ArgoCD's rootCA / Confluence's trusted-certs approach.
+  oidc:
+    enabled: true
+    name: "RHBK"
+    endpoint: "https://rhbk.devopstashtiot.page/realms/devtools"
+    clientId: "harbor"
+    scope: "openid,profile,email,groups"
+    userClaim: "preferred_username"
+    groupClaim: "groups"
+    adminGroup: "devops-tashtiot"
+  oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
