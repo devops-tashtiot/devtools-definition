@@ -99,10 +99,17 @@ example-fast-api:
     SONARQUBE_USERNAME: "admin"
 
     ARGOCD_ALLOWED_ENVS: '["prod","dr","int"]'
-    ARGOCD_CLUSTER_SECRET_REPO_URL: "https://bitbucket.devopstashtiot.page/scm/argo/argocd.git"
+    # ARGO project (and its two repos, argocd + sonarqube-as-a-service) was
+    # consolidated into the shared devops-tashtiot Bitbucket project on
+    # 2026-08-04, alongside the GitHub->Bitbucket mirrors for devops-api and
+    # a-woodpecker-plugins — one project for everything instead of one per
+    # repo. GIT_PROJECT_KEY below is shared with the sonarqube module's own
+    # Git client (SONARQUBE_AAS_REPO_SLUG), which is why both repos had to
+    # move together rather than just this one.
+    ARGOCD_CLUSTER_SECRET_REPO_URL: "https://bitbucket.devopstashtiot.page/scm/devopstashtiot/argocd.git"
 
     GIT_API_URL: "https://bitbucket.devopstashtiot.page/rest/api/1.0"
-    GIT_PROJECT_KEY: "ARGO"
+    GIT_PROJECT_KEY: "DEVOPSTASHTIOT"
     GIT_SSH_KEY_PATH: "/root/.ssh/id_ed25519"
     # Matches the "7995" key in clusters-provision/clusters/ingress-nginx/values.yaml's TCP
     # passthrough (bitbucket/bitbucket:7999 behind it) — not Bitbucket's real SSH port, but
