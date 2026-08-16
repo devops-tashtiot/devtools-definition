@@ -1,4 +1,4 @@
-# Overrides for Artifactory Data Center 7.117.15 running on the
+# Overrides for Artifactory Data Center 7.161.15 running on the
 # minikube-on-EC2 cluster.
 # Cloudflare tunnel: artifactory.devopstashtiot.page → nginx-ingress → artifactory
 #
