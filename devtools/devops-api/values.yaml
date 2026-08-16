@@ -153,6 +153,18 @@ example-fast-api:
       - secretKey: GIT_TOKEN
         remoteRef:
           key: /devtools/bitbucket/api-token
+      # Artifactory's Access API (/access/api/v1/*, everything app/v1/artifactory calls)
+      # rejects Basic auth outright (401 Unsupported authentication method Basic) — this
+      # module authenticates with Authorization: Bearer using a reference/identity token
+      # generated through Artifactory's own Admin UI instead (there's no way to bootstrap
+      # a Bearer token via the Access API itself with Basic auth, including on the
+      # token-creation endpoint). Not GitOps-managed — rotate the same way as GIT_TOKEN
+      # above, a manual `aws ssm put-parameter --overwrite`. See
+      # devtools-labs/docs/post-devtools-implementation/artifactory/README.md and
+      # devops-api's app/v1/artifactory/CLAUDE.md for the full history.
+      - secretKey: ARTIFACTORY_TOKEN
+        remoteRef:
+          key: /devtools/artifactory/api-token
       - secretKey: BITBUCKET_PASSWORD
         remoteRef:
           key: /devtools/admin/password
