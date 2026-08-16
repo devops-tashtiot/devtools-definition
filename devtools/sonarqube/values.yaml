@@ -114,3 +114,9 @@ wrapper:
   # individual users — matches the same pattern used for ArgoCD's RBAC.
   adminGroup:
     name: "devops-tashtiot"
+
+  # Same shared SSM parameter (one value for argocd/bitbucket/jira/confluence/
+  # artifactory/woodpecker — see those repos' trusted-certs.yaml) holding the
+  # Cloudflare Origin CA root cert, published by devtools-labs Terraform's
+  # devtools-secrets module.
+  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
