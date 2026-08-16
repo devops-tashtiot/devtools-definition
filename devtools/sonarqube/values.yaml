@@ -79,6 +79,13 @@ sonarqube:
     sonar.auth.oidc.enabled: true
     sonar.auth.oidc.issuerUri: "https://rhbk.devopstashtiot.page/realms/devtools"
     sonar.auth.oidc.clientId.secured: "sonarqube"
+    # Without this, sonar-auth-oidc defaults to false: Keycloak authenticates
+    # the user fine, but SonarQube has no local account for them yet and
+    # refuses to auto-provision one, bouncing the callback with "unauthorized"
+    # on every RHBK user's first SSO login regardless of group membership —
+    # provision-admin-group-job.yaml's groupsSync only grants admin to an
+    # account that already exists, it doesn't create one.
+    sonar.auth.oidc.allowUsersToSignUp: true
     # "groups" must be explicitly requested — it's an optional (not default)
     # client scope on the Keycloak side, see realm-import.yaml.
     sonar.auth.oidc.scopes: "openid email profile groups"
