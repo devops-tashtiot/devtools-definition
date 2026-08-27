@@ -4,14 +4,10 @@ This repo holds environment-specific Helm values overrides for the devtools plat
 
 ## Role in the Architecture
 
-ArgoCD's ApplicationSet (defined in `devtools-labs`) deploys each tool using **two sources**:
-
-1. The Helm chart from `devtools-provision` (base chart + default `values.yaml`)
-2. A reference named `$definition` pointing to this repo
-
-Values are merged: `devtools-provision/devtools/<tool>/values.yaml` is applied first, then `devtools-definition/devtools/<tool>/values.yaml` overrides on top.
-
-This means: **don't duplicate base values here — only override what differs per environment.**
+ArgoCD's ApplicationSet (defined in `devtools-labs`) deploys each tool from two merged Helm
+value sources: `devtools-provision/devtools/<tool>/values.yaml` (base chart + defaults)
+applied first, then `devtools-definition/devtools/<tool>/values.yaml` (this repo) overriding
+on top. **Don't duplicate base values here — only override what differs per environment.**
 
 ## Repository Structure
 
@@ -33,14 +29,12 @@ Currently tracked tools:
 ## `devtools/devops-api/values.yaml` — image tag is bot-managed, don't hand-edit it
 
 Unlike every other tool here, `devops-api`'s `image.tag` is **automatically overwritten** by
-a GitHub Actions workflow in the `devops-api` repo
-(`.github/workflows/docker-publish.yml`) on every push to its `master` — the bot bumps the
-version, builds+pushes the image to GHCR, then clones this repo and pushes the new tag into
-`devtools/devops-api/values.yaml` itself. If you edit that `tag:` line by hand around the
-same time as someone pushes to `devops-api`, expect a race — the bot's commit will land
-independently and can clobber a manual edit (or vice versa). See `devops-api/CLAUDE.md`'s CI
-section for the full flow. Every other tool's `image.tag` in this repo is still bumped
-manually as normal.
+a GitHub Actions workflow in the `devops-api` repo (`.github/workflows/docker-publish.yml`)
+on every push to its `master` — the bot bumps the version, builds+pushes to GHCR, then clones
+this repo and pushes the new tag into `devtools/devops-api/values.yaml` itself. Hand-editing
+that `tag:` line around the same time as a push to `devops-api` risks a race with the bot's
+own commit. See `devops-api/CLAUDE.md`'s CI section for the full flow. Every other tool's
+`image.tag` here is still bumped manually as normal.
 
 ## Adding Overrides for a New Tool
 

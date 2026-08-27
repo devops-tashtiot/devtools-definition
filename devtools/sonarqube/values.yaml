@@ -53,7 +53,7 @@ sonarqube:
             "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
 
   persistence:
-    storageClass: standard
+    storageClass: gp3
 
   # Chart requirement, not a credential to an external system — gates the
   # /api/system endpoints the readiness/liveness probes call. Plaintext is
