@@ -18,7 +18,7 @@
 artifactory:
   artifactory:
     persistence:
-      storageClassName: standard
+      storageClassName: gp3
       type: s3-storage-v3-direct
       awsS3V3:
         bucketName: "devtools-artifactory-binaries-342831714456"

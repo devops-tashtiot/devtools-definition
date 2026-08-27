@@ -95,13 +95,37 @@ jira:
             "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
           psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
             "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
+    # Downloads the Avisi Apps "User Directory API" plugin jar into
+    # shared-home/plugins (see jira.jira.additionalBundledPlugins in
+    # devtools-provision, which loads it from there as a bundled plugin).
+    # Idempotent — skips the download if the jar already exists from a
+    # previous pod start. Verified working, unauthenticated direct download
+    # (200, application/java-archive) on 2026-08-27.
+    - name: download-user-directory-api-plugin
+      image: curlimages/curl:8.10.1
+      command:
+        - sh
+        - -c
+        - |
+          set -eu
+          mkdir -p /shared-home/plugins
+          if [ ! -f /shared-home/plugins/nl.avisi.atlassian.user-directory-api-1.1.9.jar ]; then
+            curl -fsSL -o /shared-home/plugins/nl.avisi.atlassian.user-directory-api-1.1.9.jar \
+              "https://marketplace.atlassian.com/download/app/nl.avisi.atlassian.user-directory-api/100160/DATACENTER/artifact"
+          fi
+      volumeMounts:
+        - name: shared-home
+          mountPath: /shared-home
   volumes:
     localHome:
       persistentVolumeClaim:
-        storageClassName: standard
+        storageClassName: gp3
+    # sharedHome is ReadWriteMany, hardcoded in the vendored chart's own
+    # template with no accessModes override path — EBS (gp3) can't satisfy
+    # RWX, needs the EFS-backed StorageClass.
     sharedHome:
       persistentVolumeClaim:
-        storageClassName: standard
+        storageClassName: efs-sc
 
 wrapper:
   rdsAdmin:
