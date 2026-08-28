@@ -5,7 +5,7 @@
 # license or the sysadmin user (unlike bitbucket) — the first-run setup wizard
 # (entering the license, creating the first admin account) must be completed
 # once in the browser after initial deploy. Read the license from SSM
-# (/devtools/jira/license) and the shared admin password (/devtools/admin/password)
+# (/devops/prerequisite/jira/license) and the shared admin password (/devops/terraform-created/admin/password)
 # directly with `aws ssm get-parameter --with-decryption` when doing that —
 # there's no jira-license/jira-sysadmin Secret in-cluster since nothing would
 # ever consume it.
@@ -129,9 +129,9 @@ jira:
 
 wrapper:
   rdsAdmin:
-    usernameSsmParameter: "/devtools/rds/admin-username"
-    passwordSsmParameter: "/devtools/rds/admin-password"
+    usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
+    passwordSsmParameter: "/devops/terraform-created/rds/admin-password"
 
   # Cloudflare's public Origin CA root cert, published once for every devtool
   # by devtools-labs Terraform's devtools-secrets module.
-  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
+  trustedCertsSsmParameter: "/devops/terraform-created/cloudflare/origin-ca-root-cert"

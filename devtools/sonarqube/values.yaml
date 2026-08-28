@@ -96,18 +96,18 @@ sonarqube:
 
 wrapper:
   # Shared admin password across argocd/bitbucket/confluence/sonarqube.
-  adminPasswordSsmParameter: "/devtools/admin/password"
+  adminPasswordSsmParameter: "/devops/terraform-created/admin/password"
 
   rdsAdmin:
-    usernameSsmParameter: "/devtools/rds/admin-username"
-    passwordSsmParameter: "/devtools/rds/admin-password"
+    usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
+    passwordSsmParameter: "/devops/terraform-created/rds/admin-password"
 
   # Same shared SSM parameter (one value for argocd/sonarqube/jira/confluence/
   # bitbucket — see clusters-provision/clusters/rhbk/values.yaml's
   # sharedClientSecretSsmParameter) clusters-provision/clusters/rhbk's
   # set-client-secrets-job.yaml reads to set the real value on every client on
   # the RHBK/Keycloak side — one source of truth, no manual sync needed.
-  oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
+  oidcClientSecretSsmParameter: "/devops/terraform-created/rhbk/oidc-client-secret"
 
   # Grants admin to anyone in the devops-tashtiot AD group (see
   # clusters-provision/clusters/rhbk's group-ldap-mapper) rather than
@@ -119,4 +119,4 @@ wrapper:
   # artifactory/woodpecker — see those repos' trusted-certs.yaml) holding the
   # Cloudflare Origin CA root cert, published by devtools-labs Terraform's
   # devtools-secrets module.
-  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
+  trustedCertsSsmParameter: "/devops/terraform-created/cloudflare/origin-ca-root-cert"

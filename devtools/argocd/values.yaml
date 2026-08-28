@@ -58,7 +58,7 @@ argo-cd:
       # of this field had the leaf cert pasted in instead — same PEM
       # ingress-nginx's own TLS cert uses (clusters-provision/clusters/
       # ingress-nginx/templates/origin-cert-secret.yaml, sourced from SSM
-      # /devtools/cloudflare/origin-cert-crt) — which looks superficially
+      # /devops/terraform-created/cloudflare/origin-cert-crt) — which looks superficially
       # right (it's also "the Cloudflare Origin cert") but is a non-CA
       # end-entity certificate, so Go's x509 verifier can never treat it as a
       # trust anchor for a *different* leaf (rhbk's), and every OIDC
@@ -225,11 +225,11 @@ wrapper:
   # Same SSM value bitbucket/jira/confluence/artifactory's trusted-certs.yaml already use —
   # see devtools-provision/devtools/argocd/templates/trusted-certs.yaml for how this feeds
   # argocd-tls-certs-cm (repo-server's git-over-HTTPS trust store) instead of a JVM truststore.
-  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
+  trustedCertsSsmParameter: "/devops/terraform-created/cloudflare/origin-ca-root-cert"
 
   # Shared admin password across argocd/bitbucket/confluence — see
   # devtools-provision/devtools/argocd/templates/argocd-admin-secret.yaml
-  adminPasswordSsmParameter: "/devtools/admin/password"
+  adminPasswordSsmParameter: "/devops/terraform-created/admin/password"
 
   # RHBK-issued OIDC client secret for ArgoCD — see
   # devtools-provision/devtools/argocd/templates/oidc-secret.yaml. This is the
@@ -239,7 +239,7 @@ wrapper:
   # set-client-secrets-job.yaml reads to set the actual secret on every client
   # on the RHBK side via the Admin API — one source of truth, no manual sync
   # needed.
-  oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
+  oidcClientSecretSsmParameter: "/devops/terraform-created/rhbk/oidc-client-secret"
 
   # kube-prometheus-stack is deployed with grafana.sidecar.dashboards.enabled
   # + searchNamespace: ALL (see clusters-definition/clusters/kube-prometheus-stack)

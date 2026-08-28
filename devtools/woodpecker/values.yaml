@@ -122,15 +122,15 @@ woodpecker:
 
 wrapper:
   rdsAdmin:
-    usernameSsmParameter: "/devtools/rds/admin-username"
-    passwordSsmParameter: "/devtools/rds/admin-password"
+    usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
+    passwordSsmParameter: "/devops/terraform-created/rds/admin-password"
 
   database:
     host: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
 
   # Same SSM value argocd/bitbucket/jira/confluence/artifactory already use —
   # see devtools-provision's values.yaml/templates/trusted-certs.yaml.
-  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
+  trustedCertsSsmParameter: "/devops/terraform-created/cloudflare/origin-ca-root-cert"
 
   # Bitbucket Data Center forge integration. The client id/secret come from
   # a one-time manual step — Bitbucket has no REST API for Application Link
@@ -141,19 +141,19 @@ wrapper:
   #      choose "I don't want to reciprocate", type "External Application",
   #      direction "Incoming".
   #   3. Note the generated OAuth client id/secret, then store them:
-  #        aws ssm put-parameter --name /devtools/woodpecker/bitbucket-client-id     --type SecureString --value "<client-id>"
-  #        aws ssm put-parameter --name /devtools/woodpecker/bitbucket-client-secret --type SecureString --value "<client-secret>"
+  #        aws ssm put-parameter --name /devops/postdeploy/woodpecker/bitbucket-client-id     --type SecureString --value "<client-id>"
+  #        aws ssm put-parameter --name /devops/postdeploy/woodpecker/bitbucket-client-secret --type SecureString --value "<client-secret>"
   # Until those two SSM parameters exist, the woodpecker-bitbucket-dc-credentials
   # ExternalSecret will fail to sync and the two keys below stay unset —
   # Woodpecker will come up but repos won't list until this step is done.
   bitbucketDcSecrets:
     url: "https://bitbucket.devopstashtiot.page"
-    clientIdSsmParameter: "/devtools/woodpecker/bitbucket-client-id"
-    clientSecretSsmParameter: "/devtools/woodpecker/bitbucket-client-secret"
+    clientIdSsmParameter: "/devops/postdeploy/woodpecker/bitbucket-client-id"
+    clientSecretSsmParameter: "/devops/postdeploy/woodpecker/bitbucket-client-secret"
     # Bitbucket Server can't clone over git+https with an OAuth token, so
     # Woodpecker needs a real account's credentials for git operations —
     # reusing the shared admin login here rather than provisioning a
     # dedicated bot account, consistent with every other devtool on this
-    # platform sharing /devtools/admin/password.
+    # platform sharing /devops/terraform-created/admin/password.
     gitUsername: "admin"
-    gitPasswordSsmParameter: "/devtools/admin/password"
+    gitPasswordSsmParameter: "/devops/terraform-created/admin/password"

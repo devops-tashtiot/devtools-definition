@@ -95,7 +95,7 @@ wrapper:
     admin:
       username: "admin"
     # Shared admin password across every devtool on this platform.
-    adminPasswordSsmParameter: "/devtools/admin/password"
+    adminPasswordSsmParameter: "/devops/terraform-created/admin/password"
     # username/password are NOT set here — sourced directly from the rdsAdmin
     # SSM params below via the artifactory-db-credentials ExternalSecret (see
     # devtools-provision/devtools/artifactory/templates/secrets.yaml). Same
@@ -111,9 +111,9 @@ wrapper:
       url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory?sslmode=require"
 
   rdsAdmin:
-    usernameSsmParameter: "/devtools/rds/admin-username"
-    passwordSsmParameter: "/devtools/rds/admin-password"
+    usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
+    passwordSsmParameter: "/devops/terraform-created/rds/admin-password"
 
   # Cloudflare's public Origin CA root cert, published once for every devtool
   # by devtools-labs Terraform's devtools-secrets module.
-  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
+  trustedCertsSsmParameter: "/devops/terraform-created/cloudflare/origin-ca-root-cert"

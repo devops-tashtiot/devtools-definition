@@ -106,5 +106,5 @@ wrapper:
       url: "postgres://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/xray?sslmode=require"
 
   rdsAdmin:
-    usernameSsmParameter: "/devtools/rds/admin-username"
-    passwordSsmParameter: "/devtools/rds/admin-password"
+    usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
+    passwordSsmParameter: "/devops/terraform-created/rds/admin-password"

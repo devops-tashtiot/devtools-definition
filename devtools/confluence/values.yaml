@@ -160,12 +160,12 @@ wrapper:
   confluenceSecrets:
     # License is stored in AWS SSM Parameter Store (SecureString), not here —
     # requires the external-secrets-operator devtool + ClusterSecretStore.
-    licenseSsmParameter: "/devtools/confluence/license"
+    licenseSsmParameter: "/devops/prerequisite/confluence/license"
 
   rdsAdmin:
-    usernameSsmParameter: "/devtools/rds/admin-username"
-    passwordSsmParameter: "/devtools/rds/admin-password"
+    usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
+    passwordSsmParameter: "/devops/terraform-created/rds/admin-password"
 
   # Cloudflare's public Origin CA root cert, published once for every devtool
   # by devtools-labs Terraform's devtools-secrets module.
-  trustedCertsSsmParameter: "/devtools/cloudflare/origin-ca-root-cert"
+  trustedCertsSsmParameter: "/devops/terraform-created/cloudflare/origin-ca-root-cert"

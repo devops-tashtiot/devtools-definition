@@ -85,9 +85,9 @@ harbor:
 
 wrapper:
   rdsAdmin:
-    usernameSsmParameter: "/devtools/rds/admin-username"
-    passwordSsmParameter: "/devtools/rds/admin-password"
-  adminPasswordSsmParameter: "/devtools/admin/password"
+    usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
+    passwordSsmParameter: "/devops/terraform-created/rds/admin-password"
+  adminPasswordSsmParameter: "/devops/terraform-created/admin/password"
   # SSO against the shared RHBK instance (clusters-provision/clusters/rhbk's
   # harborClient) — see templates/configure-oidc-job.yaml for how this gets applied
   # via Harbor's own REST API. oidc_verify_cert is hardcoded false in that Job (not a
@@ -102,4 +102,4 @@ wrapper:
     userClaim: "preferred_username"
     groupClaim: "groups"
     adminGroup: "devops-tashtiot"
-  oidcClientSecretSsmParameter: "/devtools/rhbk/oidc-client-secret"
+  oidcClientSecretSsmParameter: "/devops/terraform-created/rhbk/oidc-client-secret"
