@@ -3,6 +3,15 @@
 # Cross-namespace in-cluster Service DNS: xray namespace -> artifactory namespace.
 
 xray:
+  # Scaled to 0: xray-0 has been crash-looping (0/7 containers ready) for
+  # this instance's whole lifetime, and its PDB (xray-pdb, minAvailable: 1)
+  # blocked EKS node-group rolling updates from ever draining the node it
+  # sat on — eviction is refused even though the pod isn't actually healthy,
+  # since minAvailable counts desired vs. available regardless of readiness.
+  # Re-enable (set back to 1) once the underlying crash-loop is diagnosed
+  # and fixed; until then this is dead weight blocking cluster maintenance.
+  replicaCount: 0
+
   common:
     # Ensures the "xray" database exists on the shared RDS instance before
     # Xray starts — idempotent, safe to re-run on every pod restart. Connects
