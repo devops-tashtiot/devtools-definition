@@ -1,4 +1,5 @@
-# Overrides for Confluence Data Center 9.3.1 running on the minikube-on-EC2 cluster.
+# Overrides for Confluence Data Center 9.4.1 (see image.tag in devtools-provision)
+# running on the EKS cluster.
 # Cloudflare tunnel: confluence.devopstashtiot.page → nginx-ingress → confluence
 
 confluence:
