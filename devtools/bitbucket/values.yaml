@@ -47,6 +47,45 @@ bitbucket:
   # before Bitbucket starts — idempotent, safe to re-run on every pod start.
   # Replaces the old devtools-labs/terraform/live/devtools/rds-databases unit.
   additionalInitContainers:
+    # Bitbucket's Mesh git-storage backend shells out to a real `git` binary
+    # as the "bitbucket" user (uid 2003) to serve every git-over-HTTP
+    # request (info/refs, clone, push, etc.). The repo data on the EFS-backed
+    # shared-home volume is owned by uid 50000 (an ownership mismatch left
+    # over from the EKS/EFS migration, not something this chart controls),
+    # which trips git's own "detected dubious ownership" safety check
+    # (CVE-2022-24765 mitigation) — git refuses to operate on a repo
+    # directory it doesn't consider itself the owner of unless the path is
+    # explicitly trusted via safe.directory. Bitbucket's own web app never
+    # surfaces this as a normal exception (it happens inside Mesh's git
+    # subprocess, decoded from raw gRPC HttpBackend response bytes), so
+    # every git operation against ANY repo failed with a bare, unlogged 500
+    # — confirmed live 2026-09-01 by decoding the actual gRPC payload
+    # (io.grpc DEBUG logging) to find the real "fatal: detected dubious
+    # ownership" message hiding inside it.
+    #
+    # Fix: trust every directory for git commands run as the "bitbucket"
+    # user, via that user's own ~/.gitconfig (local-home is a real
+    # persistent EBS volume, not ephemeral container filesystem, so this
+    # normally survives pod restarts on its own — this initContainer exists
+    # so a genuinely fresh local-home volume, e.g. after a full teardown/
+    # disaster-recovery restore, self-heals the same way instead of hitting
+    # this bug again on first boot).
+    - name: ensure-git-safe-directory
+      image: busybox:1.36
+      securityContext:
+        runAsUser: 2003
+        runAsGroup: 2003
+      command:
+        - sh
+        - -c
+        - |
+          set -eu
+          if ! grep -q 'directory = \*' /var/atlassian/application-data/bitbucket/.gitconfig 2>/dev/null; then
+            printf '[safe]\n\tdirectory = *\n' >> /var/atlassian/application-data/bitbucket/.gitconfig
+          fi
+      volumeMounts:
+        - name: local-home
+          mountPath: /var/atlassian/application-data/bitbucket
     - name: ensure-postgres-db
       image: postgres:17-alpine
       env:
