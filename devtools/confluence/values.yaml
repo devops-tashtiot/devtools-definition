@@ -150,9 +150,22 @@ confluence:
     # RWX (see devtools-provision/devtools/confluence/values.yaml — no
     # accessModes override there anymore) needs the EFS-backed StorageClass;
     # plain EBS (gp3) can't satisfy ReadWriteMany.
+    #
+    # efs-sc-confluence, not the shared efs-sc (terraform/modules/eks):
+    # efs-sc leaves uid/gid unset, so the EFS CSI driver's dynamic Access
+    # Point provisioning falls back to its own gidRangeStart default (50000)
+    # and hands out an arbitrary identity that has nothing to do with the
+    # "confluence" user (uid 2002) actually running this pod — and Access
+    # Point identity enforcement applies to every write server-side, so not
+    # even root inside the pod can chown around a mismatch (confirmed live
+    # 2026-09-01 against Bitbucket's identical setup: "Operation not
+    # permitted"). efs-sc-confluence fixes uid/gid to 2002 in the
+    # StorageClass itself, so every Access Point it provisions is correctly
+    # owned from creation — no chown ever needed. Same fix applied to
+    # Bitbucket's and Jira's own dedicated StorageClasses.
     sharedHome:
       persistentVolumeClaim:
-        storageClassName: efs-sc
+        storageClassName: efs-sc-confluence
     synchronyHome:
       persistentVolumeClaim:
         storageClassName: gp3
