@@ -47,46 +47,6 @@ bitbucket:
   # before Bitbucket starts — idempotent, safe to re-run on every pod start.
   # Replaces the old devtools-labs/terraform/live/devtools/rds-databases unit.
   additionalInitContainers:
-    # shared-home used to be mounted through a dynamically-provisioned EFS
-    # Access Point, which forces every file to appear owned by one fixed,
-    # arbitrary identity (uid 50000, auto-assigned by the EFS CSI driver —
-    # nothing in this chart chose it) REGARDLESS of which user actually
-    # wrote it. That's enforced server-side by the Access Point itself, not
-    # a stale permission bit — confirmed live: even `chown` as root inside
-    # the pod failed with "Operation not permitted". It also broke every
-    # git-over-HTTPS operation Mesh's git subprocess ran as the "bitbucket"
-    # user (uid 2003): git's own "detected dubious ownership" safety check
-    # (CVE-2022-24765 mitigation) refuses to operate on a directory it
-    # doesn't consider itself the owner of, and Bitbucket's web app never
-    # surfaced this as a normal exception, so every git operation against
-    # every repo failed with a bare, unlogged 500 (root-caused 2026-09-01 by
-    # decoding the raw gRPC HttpBackend response bytes at DEBUG log level).
-    #
-    # Fixed at the infrastructure level, not just for Bitbucket: shared-home
-    # now binds to a plain static EFS mount (terraform/modules/eks — no
-    # Access Point in the volumeHandle), the same fix applied to Jira's and
-    # Confluence's shared-home too, so ownership is real and a normal chown
-    # actually works. This init container is that chown, run on every pod
-    # start so a genuinely fresh shared-home volume (freshly reprovisioned
-    # by the EFS CSI driver, e.g. after a full teardown/DR restore) self-
-    # heals into the right ownership instead of needing this fixed by hand
-    # again. directoryPerms "700" (efs-sc StorageClass parameter) also means
-    # every OTHER container touching this volume — see
-    # download-user-directory-api-plugin below — has to actually run as
-    # this same uid/gid now, not just whatever curl's default image user is.
-    - name: ensure-shared-home-ownership
-      image: busybox:1.36
-      securityContext:
-        runAsUser: 0
-      command:
-        - sh
-        - -c
-        - |
-          set -eu
-          chown -R 2003:2003 /shared-home
-      volumeMounts:
-        - name: shared-home
-          mountPath: /shared-home
     - name: ensure-postgres-db
       image: postgres:17-alpine
       env:
@@ -129,15 +89,13 @@ bitbucket:
     # direct download (200, application/java-archive) on 2026-08-27.
     #
     # runAsUser/runAsGroup 2003 ("bitbucket"): shared-home is provisioned
-    # with directoryPerms "700" (efs-sc StorageClass parameter) and, since
-    # this platform moved off EFS Access Points (see terraform/modules/eks
-    # for why — APs enforce a single fixed owning identity on every write
-    # server-side, which blocks a normal chown entirely), file ownership on
-    # this volume is now real rather than silently remapped by an Access
-    # Point. curlimages/curl's default non-root user has no access to a 700
-    # directory it doesn't own — this container needs to actually be the
-    # "bitbucket" user to read/write shared-home, same as the main
-    # container and ensure-git-safe-directory below.
+    # with directoryPerms "700" (see efs-sc-bitbucket StorageClass —
+    # terraform/modules/eks — which also fixes uid/gid to 2003 so every
+    # dynamically-provisioned Access Point is correctly owned by "bitbucket"
+    # from creation; no chown ever needed). curlimages/curl's default
+    # non-root user isn't uid 2003, so it has no access to that 700
+    # directory — this container needs to actually run as the "bitbucket"
+    # user to read/write shared-home, same as the main container.
     - name: download-user-directory-api-plugin
       image: curlimages/curl:8.10.1
       securityContext:
@@ -161,24 +119,32 @@ bitbucket:
       persistentVolumeClaim:
         storageClassName: gp3
     # ReadWriteMany — see the umbrella chart's own shared-home-pvc.yaml.
-    # Needs the EFS-backed StorageClass; plain EBS can't satisfy RWX.
+    # Needs an EFS-backed StorageClass; plain EBS can't satisfy RWX.
     #
-    # The live bitbucket-shared-home PVC is actually bound to a manually
-    # created static PV (bitbucket-shared-home-static, pointed directly at
-    # the filesystem+existing path with no Access Point in the volumeHandle
-    # — see ensure-shared-home-ownership's comment above for why), not a
-    # freshly dynamically-provisioned efs-sc volume — the claimRef on that
-    # static PV is what makes this PVC bind to it instead of triggering a
-    # new dynamic (Access-Point-based) provision. storageClassName here just
-    # has to stay set to something so the PVC spec isn't left blank; it
-    # doesn't drive provisioning for the currently-bound volume. If this PVC
-    # is ever genuinely deleted with no static PV recreated first (e.g. a
-    # full disaster-recovery restore), it reverts to dynamic efs-ap
-    # provisioning and hits the Access-Point ownership problem again —
-    # recreate the static PV (see git history / devtools-labs docs) before
-    # letting that happen.
+    # efs-sc-bitbucket, not the shared efs-sc (terraform/modules/eks): efs-sc
+    # leaves uid/gid unset, so the EFS CSI driver's dynamic Access Point
+    # provisioning falls back to its own gidRangeStart default (50000) and
+    # hands out an arbitrary identity that has nothing to do with the
+    # "bitbucket" user (uid 2003) actually running this pod — and Access
+    # Point identity enforcement applies to every write server-side, so not
+    # even root inside the pod can chown around a mismatch (confirmed live
+    # 2026-09-01: "Operation not permitted"). It also broke every
+    # git-over-HTTPS operation Mesh's git subprocess ran as "bitbucket":
+    # git's own "detected dubious ownership" safety check (CVE-2022-24765
+    # mitigation) refuses to operate on a directory it doesn't consider
+    # itself the owner of, and Bitbucket's web app never surfaced this as a
+    # normal exception, so every git operation against every repo failed
+    # with a bare, unlogged 500 (root-caused by decoding the raw gRPC
+    # HttpBackend response bytes at DEBUG log level).
+    #
+    # efs-sc-bitbucket fixes uid/gid to 2003 in the StorageClass itself, so
+    # every Access Point it dynamically provisions is correctly owned from
+    # creation — no chown/safe.directory workaround needed, ever, and this
+    # self-heals correctly on a genuinely fresh volume (e.g. disaster
+    # recovery) automatically. Same fix applied to Jira's and Confluence's
+    # own dedicated StorageClasses (efs-sc-jira/efs-sc-confluence).
     sharedHome:
-      storageClassName: efs-sc
+      storageClassName: efs-sc-bitbucket
 
 wrapper:
   bitbucketSecrets:
