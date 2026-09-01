@@ -1,4 +1,5 @@
-# Overrides for Jira Data Center 9.12.8 running on the minikube-on-EC2 cluster.
+# Overrides for Jira Data Center 9.12.8 running on the devtools-eks cluster
+# (migrated from the earlier minikube-on-EC2 single-node setup).
 # Cloudflare tunnel: jira.devopstashtiot.page → nginx-ingress → jira
 #
 # NOTE: Jira's Docker image/Helm chart has no automated setup mechanism for the
@@ -63,6 +64,36 @@ jira:
   # Ensures the "jira" database/role exist on the shared RDS instance before
   # Jira starts — idempotent, safe to re-run on every pod start.
   additionalInitContainers:
+    # Jira's embedded-crowd LDAP directory screen encrypts the bind password
+    # via a JCE SecretKeySpec, which it persists under
+    # $JIRA_HOME/keys/javax.crypto.spec.SecretKeySpec_<timestamp> — but
+    # Jira never creates this "keys" subdirectory itself the way it does
+    # every other $JIRA_HOME subdir (data/, caches/, plugins/, log/, etc.)
+    # on startup. On a fresh local-home volume this makes saving an LDAP
+    # directory fail outright with a 500: "Request processing failed;
+    # nested exception is ... FileNotFoundException:
+    # /var/atlassian/application-data/jira/keys/javax.crypto.spec.
+    # SecretKeySpec_<ts> (No such file or directory)". Confirmed live
+    # 2026-09-01 by exec'ing into jira-0: every sibling dir existed as
+    # jira:jira 2770 except keys, which was simply missing — not a
+    # permissions problem, the directory had never been created. This
+    # initContainer creates it up front with the same ownership/mode as
+    # every other $JIRA_HOME subdir, so a fresh deploy doesn't hit this.
+    - name: ensure-jira-keys-dir
+      image: busybox:1.36
+      securityContext:
+        runAsUser: 0
+      command:
+        - sh
+        - -c
+        - |
+          set -eu
+          mkdir -p /var/atlassian/application-data/jira/keys
+          chown 2001:2001 /var/atlassian/application-data/jira/keys
+          chmod 2770 /var/atlassian/application-data/jira/keys
+      volumeMounts:
+        - name: local-home
+          mountPath: /var/atlassian/application-data/jira
     - name: ensure-postgres-db
       image: postgres:17-alpine
       env:
