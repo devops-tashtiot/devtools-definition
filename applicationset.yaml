@@ -7,7 +7,7 @@ spec:
   generators:
     - git:
         repoURL: https://github.com/devops-tashtiot/devtools-provision
-        revision: main
+        revision: master
         directories:
           - path: devtools/*
   template:
@@ -18,14 +18,14 @@ spec:
       project: default
       sources:
         - repoURL: https://github.com/devops-tashtiot/devtools-provision
-          targetRevision: main
+          targetRevision: master
           path: '{{path}}'
           helm:
             valueFiles:
               - values.yaml
               - $definition/devtools/{{path.basename}}/values.yaml
         - repoURL: https://github.com/devops-tashtiot/devtools-definition
-          targetRevision: main
+          targetRevision: master
           ref: definition
       destination:
         server: https://kubernetes.default.svc
