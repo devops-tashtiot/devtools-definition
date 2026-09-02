@@ -156,10 +156,6 @@ wrapper:
     # License is stored in AWS SSM Parameter Store (SecureString), not here —
     # requires the external-secrets-operator devtool + ClusterSecretStore.
     licenseSsmParameter: "/devops/prerequisite/bitbucket/license"
-    admin:
-      username: admin
-      displayName: "Admin"
-      emailAddress: "netanelzucaim100@gmail.com"
 
   rdsAdmin:
     usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
