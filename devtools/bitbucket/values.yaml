@@ -144,7 +144,12 @@ bitbucket:
     # recovery) automatically. Same fix applied to Jira's and Confluence's
     # own dedicated StorageClasses (efs-sc-jira/efs-sc-confluence).
     sharedHome:
-      storageClassName: efs-sc-bitbucket
+      # efs-static-bitbucket is still dynamic provisioning (a fresh Access
+      # Point + PV per PVC, same as efs-sc-bitbucket) but scoped under a
+      # fixed basePath (/bitbucket) via that StorageClass's `basePath`
+      # parameter (devtools-labs/terraform/modules/eks/main.tf), instead of
+      # provisioning at the EFS filesystem root.
+      storageClassName: efs-static-bitbucket
 
 wrapper:
   bitbucketSecrets:

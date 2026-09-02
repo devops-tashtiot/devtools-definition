@@ -165,7 +165,12 @@ confluence:
     # Bitbucket's and Jira's own dedicated StorageClasses.
     sharedHome:
       persistentVolumeClaim:
-        storageClassName: efs-sc-confluence
+        # efs-static-confluence is still dynamic provisioning (a fresh
+        # Access Point + PV per PVC, same as efs-sc-confluence) but scoped
+        # under a fixed basePath (/confluence) via that StorageClass's
+        # `basePath` parameter (devtools-labs/terraform/modules/eks/main.tf),
+        # instead of provisioning at the EFS filesystem root.
+        storageClassName: efs-static-confluence
     synchronyHome:
       persistentVolumeClaim:
         storageClassName: gp3

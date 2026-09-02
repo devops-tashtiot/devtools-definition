@@ -169,7 +169,12 @@ jira:
     # own dedicated StorageClasses.
     sharedHome:
       persistentVolumeClaim:
-        storageClassName: efs-sc-jira
+        # efs-static-jira is still dynamic provisioning (a fresh Access
+        # Point + PV per PVC, same as efs-sc-jira) but scoped under a fixed
+        # basePath (/jira) via that StorageClass's `basePath` parameter
+        # (devtools-labs/terraform/modules/eks/main.tf), instead of
+        # provisioning at the EFS filesystem root.
+        storageClassName: efs-static-jira
 
 wrapper:
   rdsAdmin:
