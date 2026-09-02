@@ -160,8 +160,6 @@ wrapper:
       username: admin
       displayName: "Admin"
       emailAddress: "netanelzucaim100@gmail.com"
-    # Shared admin password across argocd/bitbucket/confluence.
-    adminPasswordSsmParameter: "/devops/terraform-created/admin/password"
 
   rdsAdmin:
     usernameSsmParameter: "/devops/terraform-created/rds/admin-username"
