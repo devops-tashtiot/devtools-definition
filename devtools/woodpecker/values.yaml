@@ -112,6 +112,18 @@ woodpecker:
         subPath: ca-certificates.crt
 
   agent:
+    env:
+      # Woodpecker's k8s backend requests a ReadWriteMany PVC for each
+      # pipeline's workspace. With no storage class set here it fell back to
+      # the cluster's default ("gp3", EBS-backed via ebs.csi.aws.com), which
+      # only supports ReadWriteOnce — every pipeline's workspace PVC sat in
+      # Pending forever with "Volume provisioning failed with infeasible
+      # error... Volume capabilities not supported", which looks from the
+      # Woodpecker UI like the pipeline is stuck inside its first (git) step,
+      # since the step's pod never actually starts. efs-sc (EFS-backed, the
+      # same RWX storage class Bitbucket/Jira/Confluence use for shared-home)
+      # is the one storage class on this cluster that actually supports RWX.
+      WOODPECKER_BACKEND_K8S_STORAGE_CLASS: "efs-sc"
     resources:
       requests:
         cpu: 200m
