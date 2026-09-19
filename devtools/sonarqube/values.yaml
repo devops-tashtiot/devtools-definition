@@ -1,5 +1,5 @@
 # Overrides for SonarQube Community Edition 25.6.0.109173 running on the
-# minikube-on-EC2 cluster.
+# devtools-eks cluster.
 # Cloudflare tunnel: sonarqube.devopstashtiot.page → nginx-ingress → sonarqube
 #
 # Community Edition is free and requires no license key at all (unlike

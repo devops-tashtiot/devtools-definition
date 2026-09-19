@@ -2,12 +2,9 @@
 # Merged on top of devtools-provision/devtools/argocd/values.yaml by ArgoCD.
 # TLS is terminated at Cloudflare — ArgoCD runs insecure behind nginx-ingress + cloudflared.
 #
-# NOTE: `ingress.enabled: true` below is only correct while the minikube module
-# is the active environment (its ingress-nginx/cloudflared devtools are
-# GitOps-managed). If EKS is ever active at the same time, its argocd-ingress
-# Terraform module creates the same "argocd" Ingress object directly — do not
-# run both against this repo simultaneously, or set `enabled: false` here
-# before switching to EKS.
+# `ingress.enabled: true` below is correct: ArgoCD's own Ingress is fully
+# GitOps-managed on this platform — there is no separate Terraform-managed
+# Ingress object for it (see devtools-labs/CLAUDE.md's eks module writeup).
 
 argo-cd:
   crds:

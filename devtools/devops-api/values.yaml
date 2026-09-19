@@ -11,7 +11,7 @@ example-fast-api:
     tag: "fix-artifactory-bearer-auth"
     pullPolicy: IfNotPresent
 
-  # Per-environment values for the minikube-on-EC2 cluster — placeholders in
+  # Per-environment values for the devtools-eks cluster — placeholders in
   # devtools-provision/devtools/devops-api/values.yaml, filled in here.
   #
   # *_API_URL values below now point at each tool's REAL public
@@ -27,10 +27,11 @@ example-fast-api:
   # service token) that can satisfy it after the fact.
   #
   # Why they're back on the public hostname now: the cluster's own CoreDNS
-  # (kube-system/coredns ConfigMap, applied directly via kubectl — not
-  # tracked in any GitOps repo, since CoreDNS isn't managed by
-  # clusters-provision/clusters-definition, it's minikube's own addon) now
-  # carries `rewrite` rules that resolve every one of these
+  # (kube-system/coredns-custom ConfigMap, populated via the eks module's
+  # Terraform coredns addon configuration — not tracked in
+  # clusters-provision/clusters-definition, since CoreDNS itself isn't
+  # GitOps-managed on this platform) now carries `rewrite` rules that
+  # resolve every one of these
   # *.devopstashtiot.page hostnames straight to ingress-nginx-controller's
   # in-cluster Service IP for any caller running inside the cluster —
   # bypassing the Cloudflare Tunnel and Access entirely for in-cluster

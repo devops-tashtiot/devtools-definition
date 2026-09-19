@@ -1,4 +1,4 @@
-# Overrides for Bitbucket Data Center 10.2.2 running on the minikube-on-EC2 cluster.
+# Overrides for Bitbucket Data Center 10.2.2 running on the devtools-eks cluster.
 # Cloudflare tunnel: bitbucket.devopstashtiot.page → nginx-ingress → bitbucket
 
 bitbucket:
@@ -16,11 +16,10 @@ bitbucket:
 
   # Base chart defaults (768m/512m heap, 3Gi container limit) were fine for
   # initial setup but leave no headroom once real repos/PR builds are hitting
-  # it alongside Confluence and Jira on the same node. Bumped heap and
-  # container ceiling; requests kept modest (node is a single t3.2xlarge,
-  # 7 vCPU / 28Gi allocatable — see devtools-labs/terraform/live/devtools/minikube
-  # /terragrunt.hcl) so Confluence + Bitbucket + Jira requests don't eat the
-  # whole node and starve ArgoCD/ingress-nginx/Artifactory/SonarQube.
+  # it alongside Confluence and Jira. Bumped heap and container ceiling;
+  # requests kept modest so Confluence + Bitbucket + Jira requests don't eat
+  # a whole EKS node's allocatable capacity and starve whatever else the
+  # scheduler places alongside them.
   bitbucket:
     resources:
       jvm:
