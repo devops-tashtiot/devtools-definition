@@ -1,5 +1,5 @@
-# Overrides for JFrog Platform (Artifactory 7.161.26 + Xray 3.150.36) running
-# on the devtools-eks cluster.
+# Overrides for JFrog Artifactory OSS 7.161.26 (jfrog-platform chart, Xray
+# disabled) running on the devtools-eks cluster.
 # Cloudflare tunnel: artifactory.devopstashtiot.page → nginx-ingress → artifactory
 #
 # Replaces the former devtools/artifactory + devtools/xray directories here
@@ -10,23 +10,19 @@
 # deployed (ingress-nginx then answers artifactory.devopstashtiot.page with
 # its default 404).
 #
-# Data continuity with the old standalone release: blobs live in the same S3
-# bucket/path, metadata in the same "artifactory" database on the shared
-# RDS, and masterKey/joinKey are unchanged — so the new release in the
-# jfrog-platform namespace picks up the existing data even though the old
-# PVCs (artifactory/xray namespaces) aren't reused.
-#
-# Pro/Enterprise+ edition, intentionally UNLICENSED at deploy time —
-# wrapper.artifactorySecrets.license/licenseSsmParameter are left unset so no
-# license Secret is created or mounted. Add a license through the Admin UI
-# after first boot, or set licenseSsmParameter once /devtools/artifactory/license
-# is populated in SSM.
+# OSS, not Pro: the unlicensed Pro instance refused to convert its database
+# ("Converter can't run since no matching license found"). OSS can't take
+# over that Pro data — its blobs are in S3, which OSS can't read — so it runs
+# as a fresh instance on its own "artifactory_oss" database with blobs on the
+# PVC. The Pro instance's "artifactory" database and the
+# devtools-artifactory-binaries-342831714456 S3 bucket are left untouched, so
+# switching back to Pro with a license (database name, S3 persistence,
+# artifactory-pro image) picks the old data back up.
 
 global:
-  # One shared pair for every product in this release (Artifactory <-> Xray
-  # Access federation). Same values the old standalone artifactory/xray
-  # releases carried — must not change, Artifactory's encrypted config in
-  # the existing database depends on masterKey.
+  # Same pair the old Pro artifactory/xray releases carried — keep it if
+  # this is ever pointed back at their "artifactory" database, whose
+  # encrypted config depends on masterKey.
   masterKey: "24796f27c35ba50959f002cd4250e96620a2b229367dcc14eb6fc4e16ce1b8f7"
   joinKey: "084ac541e4965eda8498fe8a7c148cce"
 
@@ -34,31 +30,12 @@ global:
     host: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
 
 jfrog-platform:
-  # Shared platform RabbitMQ (Xray's broker) — the bitnami chart refuses to
-  # install with the chart's default password.
-  rabbitmq:
-    auth:
-      password: "xray-rabbitmq-2024"
-    # Fresh RabbitMQ in the new jfrog-platform namespace: the chart's
-    # pre-upgrade migration hook (ArgoCD runs it as PreSync on every sync)
-    # does `kubectl exec <release>-rabbitmq-0 -- rabbitmqctl ...` against a
-    # pod that doesn't exist yet, fails forever and blocks the whole sync
-    # (this bit the old xray release too). Nothing to migrate, so skip it;
-    # rabbitmqUpgradeReady satisfies the chart's guard in migration-hook.yaml.
-    migration:
-      enabled: false
-    rabbitmqUpgradeReady: true
-
   artifactory:
     artifactory:
       persistence:
         storageClassName: gp3
-        type: s3-storage-v3-direct
-        awsS3V3:
-          bucketName: "devtools-artifactory-binaries-342831714456"
-          region: "il-central-1"
 
-      # Ensures the "artifactory" database exists on the shared RDS instance
+      # Ensures the "artifactory_oss" database exists on the shared RDS instance
       # before Artifactory starts — idempotent, safe to re-run on every pod
       # restart. Connects (and owns the DB) as the shared RDS admin user —
       # no per-tool role (see devtools-provision/CLAUDE.md's 2026-07-07
@@ -84,49 +61,7 @@ jfrog-platform:
                   name: rds-admin-credentials
                   key: password
             - name: APP_DB_NAME
-              value: "artifactory"
-          command:
-            - /bin/sh
-            - -c
-            - |
-              set -eu
-              psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -tAc \
-                "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
-              psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
-                "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
-
-  xray:
-    # Kept at 0, same as the old standalone xray release: xray-0 crash-looped
-    # for that instance's whole lifetime, and its PDB (minAvailable: 1)
-    # blocked EKS node-group rollouts. Set back to 1 once Artifactory is
-    # licensed and Xray's crash-loop is diagnosed.
-    replicaCount: 0
-
-    common:
-      # Same idempotent "ensure database exists" init container as
-      # Artifactory's above, for the "xray" database.
-      customInitContainersBegin: |
-        - name: ensure-postgres-db
-          image: postgres:17-alpine
-          env:
-            - name: PGHOST
-              value: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
-            - name: PGPORT
-              value: "5432"
-            - name: PGSSLMODE
-              value: "require"
-            - name: ADMIN_USER
-              valueFrom:
-                secretKeyRef:
-                  name: rds-admin-credentials
-                  key: username
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: rds-admin-credentials
-                  key: password
-            - name: APP_DB_NAME
-              value: "xray"
+              value: "artifactory_oss"
           command:
             - /bin/sh
             - -c
@@ -149,8 +84,11 @@ wrapper:
       # sslmode=require: the shared devtools-rds parameter group has
       # rds.force_ssl=1, and Artifactory's split "metadata" service (Go
       # Postgres client) defaults to no SSL and crash-loops without it.
-      url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory?sslmode=require"
+      url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory_oss?sslmode=require"
 
+  # Xray is disabled (devtools-provision), but the umbrella's secrets.yaml
+  # always renders the xray-db Secret — kept pointing at the existing "xray"
+  # database for when it's re-enabled.
   xraySecrets:
     db:
       # Xray expects the native "postgres://" scheme, not JDBC.
