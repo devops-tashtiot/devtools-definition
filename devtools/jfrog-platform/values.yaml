@@ -32,6 +32,11 @@ global:
 jfrog-platform:
   artifactory:
     artifactory:
+      # TEMPORARY: scaled to 0 so nothing is connected while the database is
+      # dropped and the PVC deleted for a clean reset. Reverted in the next
+      # commit.
+      replicaCount: 0
+
       persistence:
         storageClassName: gp3
 
