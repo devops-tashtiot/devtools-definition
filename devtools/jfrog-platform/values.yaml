@@ -12,17 +12,20 @@
 #
 # OSS, not Pro: the unlicensed Pro instance refused to convert its database
 # ("Converter can't run since no matching license found"). OSS can't take
-# over that Pro data — its blobs are in S3, which OSS can't read — so it runs
-# as a fresh instance on its own "artifactory_oss" database with blobs on the
-# PVC. The Pro instance's "artifactory" database and the
-# devtools-artifactory-binaries-342831714456 S3 bucket are left untouched, so
-# switching back to Pro with a license (database name, S3 persistence,
-# artifactory-pro image) picks the old data back up.
+# over that Pro data — its blobs are in S3, which OSS can't read — so the old
+# Pro "artifactory" database was dropped and OSS runs as a fresh instance on
+# a new, empty "artifactory" database with blobs on the PVC. The old Pro
+# blobs are still in the devtools-artifactory-binaries-342831714456 S3
+# bucket, but without their database they can't be restored as repos.
+#
+# Don't switch off basic authentication for internal users (Administration →
+# Security) until an LDAP group with Admin Privileges is confirmed to work:
+# it blocks every internal user's password login, admin included, while LDAP
+# users still get in. That locked out the first OSS instance's admin.
 
 global:
-  # Same pair the old Pro artifactory/xray releases carried — keep it if
-  # this is ever pointed back at their "artifactory" database, whose
-  # encrypted config depends on masterKey.
+  # Artifactory's encrypted config in its database depends on masterKey —
+  # never change it for an existing database.
   masterKey: "24796f27c35ba50959f002cd4250e96620a2b229367dcc14eb6fc4e16ce1b8f7"
   joinKey: "084ac541e4965eda8498fe8a7c148cce"
 
@@ -32,15 +35,10 @@ global:
 jfrog-platform:
   artifactory:
     artifactory:
-      # TEMPORARY: scaled to 0 so nothing is connected while the database is
-      # dropped and the PVC deleted for a clean reset. Reverted in the next
-      # commit.
-      replicaCount: 0
-
       persistence:
         storageClassName: gp3
 
-      # Ensures the "artifactory_oss" database exists on the shared RDS instance
+      # Ensures the "artifactory" database exists on the shared RDS instance
       # before Artifactory starts — idempotent, safe to re-run on every pod
       # restart. Connects (and owns the DB) as the shared RDS admin user —
       # no per-tool role (see devtools-provision/CLAUDE.md's 2026-07-07
@@ -66,7 +64,7 @@ jfrog-platform:
                   name: rds-admin-credentials
                   key: password
             - name: APP_DB_NAME
-              value: "artifactory_oss"
+              value: "artifactory"
           command:
             - /bin/sh
             - -c
@@ -89,7 +87,7 @@ wrapper:
       # sslmode=require: the shared devtools-rds parameter group has
       # rds.force_ssl=1, and Artifactory's split "metadata" service (Go
       # Postgres client) defaults to no SSL and crash-loops without it.
-      url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory_oss?sslmode=require"
+      url: "jdbc:postgresql://devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com:5432/artifactory?sslmode=require"
 
   # Xray is disabled (devtools-provision), but the umbrella's secrets.yaml
   # always renders the xray-db Secret — kept pointing at the existing "xray"
