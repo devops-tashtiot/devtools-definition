@@ -34,6 +34,21 @@ global:
     host: "devtools-rds.cdwso8c8c8zk.il-central-1.rds.amazonaws.com"
 
 jfrog-platform:
+  # Shared platform RabbitMQ (Xray's broker) — the bitnami chart refuses to
+  # install with the chart's default password.
+  rabbitmq:
+    auth:
+      password: "xray-rabbitmq-2024"
+    # Fresh RabbitMQ in the new jfrog-platform namespace: the chart's
+    # pre-upgrade migration hook (ArgoCD runs it as PreSync on every sync)
+    # does `kubectl exec <release>-rabbitmq-0 -- rabbitmqctl ...` against a
+    # pod that doesn't exist yet, fails forever and blocks the whole sync
+    # (this bit the old xray release too). Nothing to migrate, so skip it;
+    # rabbitmqUpgradeReady satisfies the chart's guard in migration-hook.yaml.
+    migration:
+      enabled: false
+    rabbitmqUpgradeReady: true
+
   artifactory:
     artifactory:
       persistence:
@@ -121,21 +136,6 @@ jfrog-platform:
                 "SELECT 1 FROM pg_database WHERE datname = '$APP_DB_NAME'" | grep -q 1 || \
               psql -h "$PGHOST" -p "$PGPORT" -U "$ADMIN_USER" -d postgres -v ON_ERROR_STOP=1 -c \
                 "CREATE DATABASE \"$APP_DB_NAME\" OWNER \"$ADMIN_USER\";"
-
-    # Xray's bundled RabbitMQ refuses to install with the chart's default
-    # password.
-    rabbitmq:
-      auth:
-        password: "xray-rabbitmq-2024"
-      # Fresh RabbitMQ in the new jfrog-platform namespace: the chart's
-      # PreSync migration hook runs `kubectl exec <release>-rabbitmq-0 --
-      # rabbitmqctl ...` against a pod that doesn't exist yet, fails forever
-      # and blocks the whole ArgoCD sync (this bit the old xray release too).
-      # Nothing to migrate, so skip it; rabbitmqUpgradeReady satisfies the
-      # chart's guard in migration-hook.yaml.
-      migration:
-        enabled: false
-      rabbitmqUpgradeReady: true
 
 wrapper:
   artifactorySecrets:
